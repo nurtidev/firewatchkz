@@ -1,120 +1,189 @@
 # FireWatch — AI Platform for Fire Incident Prevention
 
-> Predictive analytics and AI-driven recommendations for fire safety departments.  
-> Multi-city SaaS product. Deploy once, serve any city.
+> Предиктивная аналитика и AI-рекомендации для служб пожарной безопасности.  
+> Multi-city SaaS. Одно развёртывание — любой город.
 
 ---
 
-## What It Does
+## Что делает платформа
 
-FireWatch transforms historical fire incident data into actionable intelligence:
+FireWatch превращает исторические данные о пожарах в конкретные действия:
 
-- **Predicts** fire incident spikes by district, building type, and season
-- **Maps** risk zones on an interactive city map with district-level heatmaps
-- **Recommends** preventive measures via Claude AI, prioritised by risk level
-- **Alerts** dispatchers in real-time via Telegram (4-tier severity)
-- **Quantifies** economic impact — prevented damage in local currency
-- **Supports multiple cities** — switch cities via the top-bar selector
-
----
-
-## Stack
-
-| Layer      | Technology                                      |
-|------------|-------------------------------------------------|
-| Frontend   | Next.js 15 · React 19 · TypeScript · Tailwind  |
-| Charts     | Recharts                                        |
-| Map        | react-leaflet + GeoJSON (per-city boundaries)  |
-| Backend    | Python 3.11 · FastAPI · Uvicorn                |
-| Analytics  | Pandas · statsmodels (Holt-Winters ETS)        |
-| AI         | Claude API (`claude-haiku-4-5`)                |
-| Scheduler  | APScheduler                                    |
-| Deploy     | Railway (two services: `frontend` + `api`)     |
+- **Инспектор** — киллер-фича: AI анализирует 5 факторов риска по каждому району и выдаёт приоритизированный список превентивных проверок (critical / high / medium / low)
+- **Прогноз** — Holt-Winters ETS, горизонт 3/6/12 месяцев, R²=0.82, доверительный интервал 80%
+- **Карта рисков** — интерактивная Leaflet-карта с цветовой шкалой по районам
+- **AI Рекомендации** — 5 конкретных мер от Claude AI с приоритетами и ожидаемым эффектом
+- **AI Аналитик** — чат на русском/казахском по данным о пожарах города
+- **KPI дашборд** — пожары с начала года, ущерб в тенге, потенциал сокращения
+- **Telegram алерты** — 4-уровневые оповещения + ежедневный дайджест
+- **Выбор города** — переключение через топбар, архитектура city-agnostic
 
 ---
 
-## Project Structure
+## Стек
+
+| Слой | Технология |
+|---|---|
+| Frontend | Next.js 15 · React 19 · TypeScript · Tailwind CSS |
+| Карта | react-leaflet + GeoJSON |
+| Графики | Recharts |
+| Backend | Python 3.11 · FastAPI · Uvicorn |
+| Аналитика | Pandas · statsmodels (Holt-Winters ETS) |
+| AI | Anthropic Claude API — `claude-haiku-4-5` |
+| Scheduler | APScheduler |
+| Деплой | Railway (два сервиса: `frontend` + `backend`) |
+
+---
+
+## Структура проекта
 
 ```
 firewatchkz/
-├── frontend/               # Next.js app
-│   ├── src/
-│   │   ├── app/            # Pages (App Router)
-│   │   ├── components/     # UI components
-│   │   └── lib/            # API client, types
-│   └── package.json
+├── frontend/
+│   └── src/
+│       ├── app/
+│       │   └── dashboard/
+│       │       ├── page.tsx           # KPI + карта + прогноз + рекомендации
+│       │       ├── inspector/         # Инспектор (киллер-фича)
+│       │       ├── map/               # Карта рисков
+│       │       ├── forecast/          # Прогноз инцидентов
+│       │       ├── recommendations/   # AI рекомендации
+│       │       ├── chat/              # AI аналитик
+│       │       └── alerts/            # Telegram настройки
+│       ├── components/
+│       │   ├── layout/                # TopBar, Sidebar, StatCard
+│       │   ├── map/RiskMap.tsx
+│       │   ├── charts/                # ForecastChart, IncidentsByDistrict
+│       │   ├── ai/                    # ChatPanel, RecommendationCard
+│       │   └── telegram/
+│       ├── context/CityContext.tsx
+│       └── lib/                       # api.ts, types.ts
 │
-├── backend/                # FastAPI app
-│   ├── routers/            # incidents, forecast, recommendations,
-│   │                       # chat, kpi, telegram, cities
-│   ├── services/           # ML forecaster, Claude client, data loader
-│   ├── data/               # City GeoJSON + seed CSV data
-│   └── main.py
+├── backend/
+│   ├── main.py
+│   ├── routers/
+│   │   ├── inspector.py               # Инспектор — 5 факторов риска
+│   │   ├── forecast.py                # Holt-Winters прогноз
+│   │   ├── incidents.py               # risk-map + список инцидентов
+│   │   ├── kpi.py                     # KPI метрики
+│   │   ├── recommendations.py         # Claude AI рекомендации
+│   │   ├── chat.py                    # AI аналитик
+│   │   ├── cities.py                  # список городов + GeoJSON
+│   │   └── telegram.py               # алерты
+│   ├── services/
+│   │   ├── data_loader.py             # загрузка CSV → DataFrame, кэш
+│   │   ├── forecaster.py              # Holt-Winters wrapper
+│   │   ├── claude_client.py           # Anthropic SDK
+│   │   └── telegram_service.py
+│   ├── scripts/
+│   │   └── generate_data.py           # генератор синтетических данных
+│   └── data/
+│       ├── geojson/astana_districts.geojson
+│       └── sample/                    # seed CSV (в git)
 │
-├── data/
-│   └── sample/             # Synthetic seed data (committed)
+├── data/sample/astana_incidents.csv   # 834 инцидента, 3 года
 │
-├── CONTEXT.md              # Project context for AI agents
-└── TASKS.md                # Task board
+├── CLAUDE.md     # инструкции для Claude Code
+├── AGENTS.md     # инструкции для Codex и других агентов
+├── CONTEXT.md    # контекст проекта
+└── TASKS.md      # таск-борд
 ```
 
 ---
 
-## Getting Started
+## Быстрый старт
 
 ### Backend
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # add ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN
+cp .env.example .env        # добавь ANTHROPIC_API_KEY
 uvicorn main:app --reload
-# API docs: http://localhost:8000/docs
+# http://localhost:8000/docs
 ```
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local   # set NEXT_PUBLIC_API_URL
+# .env.local уже настроен на localhost:8000
 npm run dev
-# App: http://localhost:3000
+# http://localhost:3000
 ```
 
 ---
 
-## Deploy on Railway
+## Тестовые данные
 
-1. Push repo to GitHub
-2. Create a new Railway project → "Deploy from GitHub repo"
-3. Add two services: `backend/` and `frontend/`
-4. Set env vars in Railway dashboard
-5. Railway auto-detects Python (Nixpacks) and Node
+834 синтетических инцидента по Астане за 3 года (2023–2026):
+- 5 районов: Есіл, Алматы, Байқоңыр, Сарыарқа, Нұра
+- Сезонность: пики в январе–феврале и мае–июне
+- Суммарный ущерб: ₸14.1 млрд
 
----
-
-## Data
-
-- **Production**: pulled from [data.egov.kz](https://data.egov.kz) (KZ open data portal)
-- **Development / Demo**: synthetic data generated by `backend/scripts/generate_data.py`
-
-To regenerate demo data:
+Перегенерировать:
 ```bash
 cd backend
-python scripts/generate_data.py --city astana --years 3
+python3 scripts/generate_data.py --city astana --years 3 --output ../data/sample/astana_incidents.csv
+```
+
+Данные для продакшена: [data.egov.kz](https://data.egov.kz) (открытые данные ДЧС РК).
+
+---
+
+## Деплой на Railway
+
+1. Запушить репо на GitHub
+2. Railway → New Project → Deploy from GitHub
+3. Два сервиса: `backend/` и `frontend/`
+4. Переменные окружения:
+
+**backend:**
+```
+ANTHROPIC_API_KEY=sk-ant-...
+TELEGRAM_BOT_TOKEN=...       (опционально)
+TELEGRAM_CHAT_ID=...         (опционально)
+```
+
+**frontend:**
+```
+NEXT_PUBLIC_API_URL=https://<твой-backend>.up.railway.app
 ```
 
 ---
 
-## Roadmap
+## API эндпоинты
 
-- [ ] MVP — single city, core dashboard + forecast + AI chat
-- [ ] Multi-city — city selector, per-city GeoJSON, city-aware data pipeline
-- [ ] Mobile app — React Native dispatcher companion
-- [ ] Integration — direct feed from 112 emergency dispatch system
+```
+GET  /health
+GET  /api/v1/cities
+GET  /api/v1/cities/{id}
+GET  /api/v1/cities/{id}/geojson
+GET  /api/v1/kpi?city=
+GET  /api/v1/risk-map?city=
+GET  /api/v1/incidents?city=&district=&limit=
+GET  /api/v1/forecast?city=&months=3|6|12
+GET  /api/v1/inspector?city=
+GET  /api/v1/recommendations?city=
+POST /api/v1/chat
+GET  /api/v1/telegram/config
+POST /api/v1/telegram/test?city=
+```
 
 ---
 
-## License
+## Роадмап
+
+- [x] MVP — дашборд, прогноз, карта рисков, AI чат
+- [x] Инспектор — превентивные проверки по факторам риска
+- [ ] Пожарные части и гидранты на карте
+- [ ] Авторизация и роли (диспетчер / аналитик / admin)
+- [ ] Реальные данные с data.egov.kz
+- [ ] Мобильное приложение для диспетчеров
+- [ ] Интеграция с системой 112
+
+---
+
+## Лицензия
 
 Proprietary. All rights reserved.

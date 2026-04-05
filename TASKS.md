@@ -424,6 +424,280 @@ GET /api/v1/cities/{city_id}       — city config (center, zoom, geojson_url)
 
 ---
 
+### [A-Inspector] Inspector — backend router
+**Status:** `[x]`  
+**Priority:** High  
+**Depends on:** A-3, A-5
+
+**What was built:**  
+`backend/routers/inspector.py` — анализирует 5 факторов риска для каждого района и возвращает приоритизированный список для превентивных проверок.
+
+**Endpoint:**
+```http
+GET /api/v1/inspector?city=astana
+```
+
+**5 факторов риска:**
+1. Высокий индекс риска района (≥70/100)
+2. Последний пожар менее 14 дней назад
+3. Сезонный пик (январь, февраль, май, июнь)
+4. Доля промышленных объектов и стройплощадок ≥25%
+5. Опасная причина в последние 30 дней (electrical / arson)
+
+**Приоритет:** critical (4-5 факторов) → high (3) → medium (2) → low (1)
+
+**Response includes:** `district`, `priority`, `matched_factors`, `factors[]`, `recommendation`, `days_since_last_incident`, `avg_damage_tenge`
+
+---
+
+### [B-Inspector] Inspector — frontend page
+**Status:** `[x]`  
+**Priority:** High  
+**Depends on:** B-1, A-Inspector
+
+**What was built:**  
+`frontend/src/app/dashboard/inspector/page.tsx` — страница Инспектора с раскрывающимися карточками по районам.
+
+**UI features:**
+- Карточки отсортированы по приоритету (critical первыми)
+- Каждая карточка раскрывается: показывает все 5 факторов с ✅/⬜, статистику, рекомендацию
+- Summary-бейджи вверху: «1 критических», «1 высоких»
+- Выделен в сайдбаре оранжевым как главная фича
+
+---
+
+### [A-11] Fire stations data + router
+**Status:** `[ ]`  
+**Priority:** High  
+**Depends on:** A-3, C-1
+
+**What to build:**  
+`backend/data/sample/astana_stations.json` + `backend/routers/stations.py` + extend `backend/services/data_loader.py`
+
+**What to include:**  
+Создать seed-данные по пожарным частям Астаны:
+```json
+[
+  {
+    "id": "station-1",
+    "city": "astana",
+    "name": "ПЧ-1",
+    "district": "Есіл",
+    "lat": 51.17,
+    "lon": 71.44,
+    "units": 6,
+    "staff_count": 48
+  }
+]
+```
+
+**Endpoints:**
+```http
+GET /api/v1/stations?city=astana
+GET /api/v1/stations/coverage?city=astana
+```
+
+**Coverage response:**
+```json
+[
+  {
+    "district": "Есіл",
+    "nearest_station": "ПЧ-1",
+    "distance_km": 2.8,
+    "estimated_response_min": 7.4
+  }
+]
+```
+
+**Implementation notes:**
+- Hardcode/load stations from JSON
+- Add `get_stations(city)` to `DataLoader`
+- For coverage:
+  - use district centroids from GeoJSON properties
+  - compute straight-line distance
+  - estimate response time with simple formula:
+    `estimated_response_min = max(3, distance_km * 2.5)`
+
+**Acceptance criteria:**
+- Returns list of Astana fire stations
+- Coverage endpoint returns one row per district
+- Invalid city returns 404
+
+---
+
+### [A-12] Hydrants data + router
+**Status:** `[ ]`  
+**Priority:** High  
+**Depends on:** A-3, C-1
+
+**What to build:**  
+`backend/data/sample/astana_hydrants.json` + `backend/routers/hydrants.py` + extend `backend/services/data_loader.py`
+
+**Hydrant schema:**
+```json
+[
+  {
+    "id": "hydrant-1",
+    "city": "astana",
+    "district": "Алматы",
+    "address": "ул. Тәуелсіздік 10",
+    "lat": 51.21,
+    "lon": 71.35,
+    "status": "working"
+  }
+]
+```
+
+**Allowed statuses:**
+- `working`
+- `maintenance`
+- `out_of_service`
+
+**Endpoints:**
+```http
+GET /api/v1/hydrants?city=astana
+GET /api/v1/hydrants?city=astana&status=working
+```
+
+**Acceptance criteria:**
+- Returns hydrants for Astana
+- Status filter works
+- No null coordinates
+- Invalid city returns 404
+
+---
+
+### [A-13] Minimal auth + role model
+**Status:** `[ ]`  
+**Priority:** Medium  
+**Depends on:** A-1
+
+**What to build:**  
+`backend/routers/auth.py` + `backend/services/auth_service.py`
+
+**Roles:**
+- `viewer`
+- `dispatcher`
+- `analyst`
+- `admin`
+
+**MVP approach:**
+- No database yet
+- Hardcoded users in memory / JSON file:
+```json
+[
+  { "email": "admin@firewatch.kz", "password": "admin123", "role": "admin" },
+  { "email": "analyst@firewatch.kz", "password": "analyst123", "role": "analyst" }
+]
+```
+
+**Endpoints:**
+```http
+POST /api/v1/auth/login
+GET /api/v1/auth/me
+```
+
+**Response shape:**
+```json
+{
+  "token": "mock-jwt-or-signed-token",
+  "user": {
+    "email": "admin@firewatch.kz",
+    "role": "admin"
+  }
+}
+```
+
+**Acceptance criteria:**
+- Login works for test users
+- `/me` returns current user
+- Invalid credentials return 401
+
+---
+
+### [A-14] Inspection plan generator
+**Status:** `[ ]`  
+**Priority:** High  
+**Depends on:** A-3, A-5, A-8
+
+**What to build:**  
+`backend/routers/inspection_plan.py` + `backend/services/inspection_planner.py`
+
+**Endpoint:**
+```http
+GET /api/v1/inspection-plan?city=astana
+```
+
+**Response:**
+```json
+{
+  "city": "astana",
+  "generated_at": "2026-04-05T10:00:00Z",
+  "items": [
+    {
+      "district": "Байқоңыр",
+      "priority": "high",
+      "reason": "High risk score and severe incident pattern",
+      "recommended_actions": [
+        "Inspect industrial facilities",
+        "Check electrical systems",
+        "Review hydrant availability"
+      ]
+    }
+  ]
+}
+```
+
+**Planning rules:**
+- High priority if `risk_score >= 70`
+- Medium if `40 <= risk_score < 70`
+- Add cause-driven action text based on top cause
+- Use KPI/risk-map data only, no LLM required for MVP
+
+**Acceptance criteria:**
+- Returns at least 3 prioritized items
+- Output is deterministic
+- Highest-risk district appears first
+
+---
+
+### [A-15] Operations log router
+**Status:** `[ ]`  
+**Priority:** Medium  
+**Depends on:** A-3, A-11
+
+**What to build:**  
+`backend/data/sample/astana_operations.csv` + `backend/routers/operations.py`
+
+**CSV fields:**
+```csv
+id,date,city,district,station_id,incident_id,response_time_min,outcome,notes
+```
+
+**Endpoint:**
+```http
+GET /api/v1/operations?city=astana
+GET /api/v1/operations/kpi?city=astana
+```
+
+**KPI response:**
+```json
+{
+  "city": "astana",
+  "avg_response_time_min": 8.4,
+  "operations_count": 214,
+  "fastest_station": "ПЧ-1",
+  "slowest_district": "Нұра"
+}
+```
+
+**Acceptance criteria:**
+- Operations list loads from sample CSV
+- KPI endpoint aggregates correctly
+- Response time is numeric and usable in charts
+
+---
+
 ## Track B — Frontend
 > B-1 can start immediately. B-2 through B-6 depend on B-1.  
 > Frontend can use mock/static data until backend Track A is ready.
@@ -675,6 +949,129 @@ Wrap `layout.tsx` in `CityContext.Provider`. All other components read city from
 
 ---
 
+### [B-9] Fire stations layer on map
+**Status:** `[ ]`  
+**Priority:** High  
+**Depends on:** B-4, A-11
+
+**What to build:**  
+Extend `frontend/src/components/map/RiskMap.tsx`
+
+**UI features:**
+- Add station markers to map
+- Marker popup shows:
+  - station name
+  - district
+  - units
+  - staff count
+- Add toggle:
+  - `Районы`
+  - `Пожарные части`
+  - `Гидранты` (future-ready placeholder allowed)
+
+**Data source:**  
+`GET /api/v1/stations?city={city}`
+
+**Acceptance criteria:**
+- Stations render on the map
+- Popups open on click
+- Layer toggle works without page reload
+
+---
+
+### [B-10] Hydrants map layer
+**Status:** `[ ]`  
+**Priority:** Medium  
+**Depends on:** B-9, A-12
+
+**What to build:**  
+Extend `frontend/src/components/map/RiskMap.tsx`
+
+**UI behavior:**
+- Hydrant markers on map
+- Color by status:
+  - working → blue
+  - maintenance → yellow
+  - out_of_service → red
+- Popup:
+  - address
+  - district
+  - status
+
+**Acceptance criteria:**
+- Hydrants render correctly
+- Status color is visible
+- Layer toggle can hide/show hydrants
+
+---
+
+### [B-11] Frontend auth shell + role guards
+**Status:** `[ ]`  
+**Priority:** Medium  
+**Depends on:** B-1, A-13
+
+**What to build:**  
+`frontend/src/app/login/page.tsx` + `frontend/src/context/AuthContext.tsx`
+
+**Features:**
+- Login form
+- Persist token in `localStorage`
+- Protect dashboard routes
+- Display current role in top bar
+- Hide admin-only controls for non-admin users
+
+**Acceptance criteria:**
+- Unauthenticated user is redirected to `/login`
+- Successful login opens dashboard
+- Role-based UI hiding works
+
+---
+
+### [B-12] Inspection plan panel
+**Status:** `[ ]`  
+**Priority:** Medium  
+**Depends on:** B-6, A-14
+
+**What to build:**  
+`frontend/src/components/ai/InspectionPlanPanel.tsx`
+
+**UI:**
+- Section title: "План проверок"
+- Cards grouped by priority
+- Each item shows:
+  - district
+  - reason
+  - recommended actions
+
+**Acceptance criteria:**
+- Pulls real data from `/inspection-plan`
+- Priority is color-coded
+- Empty/loading states are handled
+
+---
+
+### [B-13] Operations analytics panel
+**Status:** `[ ]`  
+**Priority:** Medium  
+**Depends on:** B-3, B-5, A-15
+
+**What to build:**  
+`frontend/src/components/charts/ResponseTimeChart.tsx`
+
+**UI:**
+- Line/bar chart for response times
+- Small KPI summary:
+  - average response time
+  - fastest station
+  - slowest district
+
+**Acceptance criteria:**
+- Uses `/operations/kpi`
+- Renders without SSR issues
+- Updates on city change
+
+---
+
 ## Track C — Data & GeoJSON
 > Fully independent, can run in parallel with A and B.
 
@@ -766,6 +1163,13 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 | A-8 KPI router | A | `[x]` | A-4, A-5 |
 | A-9 Telegram router | A | `[x]` | A-4, A-5 |
 | A-10 Cities router | A | `[x]` | — |
+| A-Inspector Inspector backend | A | `[x]` | B-Inspector |
+| B-Inspector Inspector frontend | B | `[x]` | — |
+| A-11 Fire stations | A | `[ ]` | A-12, B-9 |
+| A-12 Hydrants router | A | `[ ]` | A-11, B-10 |
+| A-13 Minimal auth | A | `[ ]` | B-11 |
+| A-14 Inspection plan | A | `[ ]` | B-12 |
+| A-15 Operations log | A | `[ ]` | B-13 |
 | B-1 Frontend scaffold | B | `[x]` | A-1, A-2, C-1 |
 | B-2 City selector | B | `[x]` | B-3, B-4, B-5 |
 | B-3 KPI cards | B | `[x]` | B-2, B-4, B-5 |
@@ -774,5 +1178,10 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 | B-6 Recommendations | B | `[x]` | B-7, B-8 |
 | B-7 AI chat panel | B | `[x]` | B-6, B-8 |
 | B-8 Telegram panel | B | `[x]` | B-6, B-7 |
+| B-9 Fire stations map | B | `[ ]` | B-10 |
+| B-10 Hydrants layer | B | `[ ]` | — |
+| B-11 Frontend auth | B | `[ ]` | — |
+| B-12 Inspection panel | B | `[ ]` | B-13 |
+| B-13 Operations analytics | B | `[ ]` | — |
 | C-1 Astana GeoJSON | C | `[x]` | Everything |
 | D-1 Railway config | D | `[x]` | — |
