@@ -7,6 +7,7 @@ from typing import Optional
 import pandas as pd
 from fastapi import HTTPException
 
+from services.db import database_service
 
 CITY_CONFIG = {
     "astana": {
@@ -134,6 +135,21 @@ class DataLoader:
             dataframe["response_time_min"] = dataframe["response_time_min"].astype(float)
             _DATAFRAME_CACHE[cache_key] = dataframe.sort_values("date").reset_index(drop=True)
         return _DATAFRAME_CACHE[cache_key].copy()
+
+    def get_buildings(self, city: str) -> list[dict]:
+        city_key = self._validate_city(city)
+        database_buildings = database_service.get_buildings(city_key)
+        if database_buildings:
+            return database_buildings
+
+        cache_key = f"buildings:{city_key}"
+        if cache_key not in _JSON_CACHE:
+            json_path = _PROJECT_ROOT / "backend" / "data" / "sample" / f"{city_key}_buildings.json"
+            if not json_path.exists():
+                return []
+            with json_path.open(encoding="utf-8") as file:
+                _JSON_CACHE[cache_key] = json.load(file)
+        return [building.copy() for building in _JSON_CACHE[cache_key]]
 
     def get_district_centroids(self, city: str) -> dict[str, tuple[float, float]]:
         city_key = self._validate_city(city)

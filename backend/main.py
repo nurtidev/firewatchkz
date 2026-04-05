@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers import (
     auth,
+    buildings,
     chat,
     cities,
     forecast,
@@ -25,6 +26,7 @@ from routers import (
     telegram,
 )
 from services.telegram_service import telegram_service
+from services.db import database_service
 
 API_PREFIX = "/api/v1"
 scheduler = AsyncIOScheduler(timezone="UTC")
@@ -32,6 +34,8 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    database_service.apply_migrations()
+    database_service.seed_buildings()
     if telegram_service.is_configured() and not scheduler.running:
         scheduler.add_job(
             telegram_service.send_test_alert,
@@ -59,6 +63,7 @@ app.add_middleware(
 
 app.include_router(cities.router, prefix=API_PREFIX)
 app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(buildings.router, prefix=API_PREFIX)
 app.include_router(incidents.router, prefix=API_PREFIX)
 app.include_router(forecast.router, prefix=API_PREFIX)
 app.include_router(recommendations.router, prefix=API_PREFIX)

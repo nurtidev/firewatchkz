@@ -31,6 +31,24 @@ function formatPeriod(period: string): string {
   return `${month}.${year.slice(2)}`
 }
 
+function getCurrentPeriod(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `${now.getFullYear()}-${month}`
+}
+
+function getLastCompletedActual(data: ForecastPoint[]): ForecastPoint | undefined {
+  const currentPeriod = getCurrentPeriod()
+  return [...data]
+    .reverse()
+    .find((point) => typeof point.actual === 'number' && point.period < currentPeriod)
+}
+
+function getCurrentMonthActual(data: ForecastPoint[]): ForecastPoint | undefined {
+  const currentPeriod = getCurrentPeriod()
+  return data.find((point) => point.period === currentPeriod && typeof point.actual === 'number')
+}
+
 export function ForecastChart() {
   const { city } = useCity()
   const [months, setMonths] = useState<Months>(6)
@@ -65,7 +83,8 @@ export function ForecastChart() {
 
   const forecastStart = data.find((point) => typeof point.predicted === 'number')?.period
   const forecastEnd = data[data.length - 1]?.period
-  const lastActual = [...data].reverse().find((point) => typeof point.actual === 'number')
+  const lastCompletedActual = getLastCompletedActual(data)
+  const currentMonthActual = getCurrentMonthActual(data)
   const nextForecast = data.find((point) => typeof point.predicted === 'number')
 
   return (
@@ -95,12 +114,14 @@ export function ForecastChart() {
         </div>
       </div>
 
-      {!loading && (lastActual || nextForecast) && (
+      {!loading && (lastCompletedActual || nextForecast) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-500">Последний факт</div>
-            <div className="mt-1 text-lg font-semibold text-white">{lastActual?.actual ?? '—'}</div>
-            <div className="text-xs text-gray-500">{lastActual ? formatPeriod(lastActual.period) : '—'}</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-gray-500">Последний завершённый месяц</div>
+            <div className="mt-1 text-lg font-semibold text-white">{lastCompletedActual?.actual ?? '—'}</div>
+            <div className="text-xs text-gray-500">
+              {lastCompletedActual ? formatPeriod(lastCompletedActual.period) : 'Нет завершённых месяцев'}
+            </div>
           </div>
           <div className="rounded-2xl border border-orange-400/15 bg-orange-500/6 px-4 py-3">
             <div className="text-[11px] uppercase tracking-[0.16em] text-orange-200/70">Следующий прогноз</div>
@@ -114,6 +135,14 @@ export function ForecastChart() {
             </div>
             <div className="text-xs text-gray-500">Для ближайшего прогнозного периода</div>
           </div>
+        </div>
+      )}
+
+      {!loading && currentMonthActual && (
+        <div className="rounded-2xl border border-sky-400/15 bg-sky-400/8 px-4 py-3 text-sm text-sky-50/90">
+          Текущий месяц идёт отдельно: сейчас за {formatPeriod(currentMonthActual.period)} зафиксировано{' '}
+          <span className="font-semibold text-white">{currentMonthActual.actual}</span> инцидентов. Мы не сравниваем его
+          напрямую со следующим полным месяцем прогноза.
         </div>
       )}
 
