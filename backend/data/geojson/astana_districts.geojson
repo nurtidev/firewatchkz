@@ -1,0 +1,128 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "district": "Есіл",
+        "district_en": "Yesil",
+        "center_lat": 51.185,
+        "center_lon": 71.475
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [71.4, 51.16],
+            [71.42, 51.15],
+            [71.48, 51.15],
+            [71.55, 51.18],
+            [71.55, 51.2],
+            [71.52, 51.22],
+            [71.45, 51.22],
+            [71.41, 51.2],
+            [71.4, 51.16]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "district": "Алматы",
+        "district_en": "Almaty",
+        "center_lat": 51.21,
+        "center_lon": 71.35
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [71.28, 51.18],
+            [71.32, 51.17],
+            [71.39, 51.17],
+            [71.42, 51.18],
+            [71.41, 51.2],
+            [71.38, 51.23],
+            [71.34, 51.25],
+            [71.29, 51.23],
+            [71.28, 51.18]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "district": "Байқоңыр",
+        "district_en": "Baikonur",
+        "center_lat": 51.145,
+        "center_lon": 71.4
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [71.35, 51.1],
+            [71.41, 51.1],
+            [71.45, 51.12],
+            [71.45, 51.15],
+            [71.42, 51.15],
+            [71.4, 51.16],
+            [71.36, 51.15],
+            [71.35, 51.1]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "district": "Сарыарқа",
+        "district_en": "Saryarka",
+        "center_lat": 51.235,
+        "center_lon": 71.505
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [71.42, 51.2],
+            [71.45, 51.22],
+            [71.52, 51.22],
+            [71.55, 51.2],
+            [71.58, 51.22],
+            [71.57, 51.28],
+            [71.5, 51.27],
+            [71.44, 51.25],
+            [71.42, 51.2]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "district": "Нұра",
+        "district_en": "Nura",
+        "center_lat": 51.12,
+        "center_lon": 71.525
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [71.45, 51.08],
+            [71.53, 51.08],
+            [71.58, 51.11],
+            [71.57, 51.16],
+            [71.55, 51.18],
+            [71.48, 51.15],
+            [71.45, 51.15],
+            [71.45, 51.08]
+          ]
+        ]
+      }
+    }
+  ]
+}

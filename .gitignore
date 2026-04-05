@@ -1,0 +1,53 @@
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ─── Node / Next.js ───────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ─── Data files (raw / large) ─────────────────────────────
+data/raw/
+data/processed/
+*.csv
+*.xlsx
+*.parquet
+!data/sample/*.csv        # keep sample seed data
+
+# ─── IDE / OS ─────────────────────────────────────────────
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+
+# ─── Secrets ──────────────────────────────────────────────
+*.pem
+*.key
+secrets/
+
+# ─── Railway / Deploy ─────────────────────────────────────
+.railway/
