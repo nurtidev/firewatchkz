@@ -1,0 +1,56 @@
+[
+  {
+    "id": "hydrant-1",
+    "city": "astana",
+    "district": "Алматы",
+    "address": "ул. Тәуелсіздік 10",
+    "lat": 51.210,
+    "lon": 71.349,
+    "status": "working"
+  },
+  {
+    "id": "hydrant-2",
+    "city": "astana",
+    "district": "Есіл",
+    "address": "пр. Кабанбай батыра 42",
+    "lat": 51.183,
+    "lon": 71.468,
+    "status": "working"
+  },
+  {
+    "id": "hydrant-3",
+    "city": "astana",
+    "district": "Байқоңыр",
+    "address": "ул. Жангельдина 17",
+    "lat": 51.139,
+    "lon": 71.397,
+    "status": "maintenance"
+  },
+  {
+    "id": "hydrant-4",
+    "city": "astana",
+    "district": "Сарыарқа",
+    "address": "пр. Республики 58",
+    "lat": 51.236,
+    "lon": 71.501,
+    "status": "working"
+  },
+  {
+    "id": "hydrant-5",
+    "city": "astana",
+    "district": "Нұра",
+    "address": "ул. Сыганак 21",
+    "lat": 51.122,
+    "lon": 71.531,
+    "status": "out_of_service"
+  },
+  {
+    "id": "hydrant-6",
+    "city": "astana",
+    "district": "Алматы",
+    "address": "ул. Бауыржана Момышулы 12",
+    "lat": 51.224,
+    "lon": 71.362,
+    "status": "maintenance"
+  }
+]

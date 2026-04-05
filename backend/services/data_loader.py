@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -19,6 +20,7 @@ CITY_CONFIG = {
 }
 
 _DATAFRAME_CACHE: dict[str, pd.DataFrame] = {}
+_JSON_CACHE: dict[str, list[dict]] = {}
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -110,10 +112,47 @@ class DataLoader:
             )
         return cities
 
+    def get_stations(self, city: str) -> list[dict]:
+        city_key = self._validate_city(city)
+        stations = self._load_json_records(city_key, "stations")
+        return [station.copy() for station in stations]
+
+    def get_hydrants(self, city: str, status: Optional[str] = None) -> list[dict]:
+        city_key = self._validate_city(city)
+        hydrants = [hydrant.copy() for hydrant in self._load_json_records(city_key, "hydrants")]
+        if status:
+            hydrants = [hydrant for hydrant in hydrants if hydrant["status"] == status]
+        return hydrants
+
+    def get_operations(self, city: str) -> pd.DataFrame:
+        city_key = self._validate_city(city)
+        cache_key = f"operations:{city_key}"
+        if cache_key not in _DATAFRAME_CACHE:
+            csv_path = _PROJECT_ROOT / "backend" / "data" / "sample" / f"{city_key}_operations.csv"
+            dataframe = pd.read_csv(csv_path)
+            dataframe["date"] = pd.to_datetime(dataframe["date"], format="%Y-%m-%d")
+            dataframe["response_time_min"] = dataframe["response_time_min"].astype(float)
+            _DATAFRAME_CACHE[cache_key] = dataframe.sort_values("date").reset_index(drop=True)
+        return _DATAFRAME_CACHE[cache_key].copy()
+
+    def get_district_centroids(self, city: str) -> dict[str, tuple[float, float]]:
+        city_key = self._validate_city(city)
+        geojson_path = _PROJECT_ROOT / CITY_CONFIG[city_key]["geojson_path"]
+        payload = json.loads(geojson_path.read_text(encoding="utf-8"))
+        centroids: dict[str, tuple[float, float]] = {}
+
+        for feature in payload.get("features", []):
+            properties = feature.get("properties", {})
+            district = properties.get("district")
+            center_lat = properties.get("center_lat")
+            center_lon = properties.get("center_lon")
+            if district and center_lat is not None and center_lon is not None:
+                centroids[district] = (float(center_lat), float(center_lon))
+
+        return centroids
+
     def _get_city_dataframe(self, city: str) -> pd.DataFrame:
-        city_key = city.lower()
-        if city_key not in CITY_CONFIG:
-            raise HTTPException(status_code=404, detail="City not found")
+        city_key = self._validate_city(city)
 
         if city_key not in _DATAFRAME_CACHE:
             _DATAFRAME_CACHE[city_key] = self._load_city_dataframe(city_key)
@@ -127,6 +166,20 @@ class DataLoader:
         dataframe["casualties"] = dataframe["casualties"].astype(int)
         dataframe["damage_tenge"] = dataframe["damage_tenge"].astype(int)
         return dataframe.sort_values("date").reset_index(drop=True)
+
+    def _load_json_records(self, city: str, resource_name: str) -> list[dict]:
+        cache_key = f"{resource_name}:{city}"
+        if cache_key not in _JSON_CACHE:
+            json_path = _PROJECT_ROOT / "backend" / "data" / "sample" / f"{city}_{resource_name}.json"
+            with json_path.open(encoding="utf-8") as file:
+                _JSON_CACHE[cache_key] = json.load(file)
+        return _JSON_CACHE[cache_key]
+
+    def _validate_city(self, city: str) -> str:
+        city_key = city.lower()
+        if city_key not in CITY_CONFIG:
+            raise HTTPException(status_code=404, detail="City not found")
+        return city_key
 
 
 data_loader = DataLoader()

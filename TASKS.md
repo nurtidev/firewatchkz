@@ -467,7 +467,7 @@ GET /api/v1/inspector?city=astana
 ---
 
 ### [A-11] Fire stations data + router
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** High  
 **Depends on:** A-3, C-1
 
@@ -523,10 +523,12 @@ GET /api/v1/stations/coverage?city=astana
 - Coverage endpoint returns one row per district
 - Invalid city returns 404
 
+**Notes:** Added `backend/data/sample/astana_stations.json`, `backend/routers/stations.py`, `DataLoader.get_stations(city)` and GeoJSON centroid-based coverage calculation.
+
 ---
 
 ### [A-12] Hydrants data + router
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** High  
 **Depends on:** A-3, C-1
 
@@ -565,10 +567,12 @@ GET /api/v1/hydrants?city=astana&status=working
 - No null coordinates
 - Invalid city returns 404
 
+**Notes:** Added `backend/data/sample/astana_hydrants.json`, `backend/routers/hydrants.py`, and `DataLoader.get_hydrants(city, status)` backed by cached JSON seed data.
+
 ---
 
 ### [A-13] Minimal auth + role model
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** Medium  
 **Depends on:** A-1
 
@@ -613,10 +617,12 @@ GET /api/v1/auth/me
 - `/me` returns current user
 - Invalid credentials return 401
 
+**Notes:** Added `backend/services/auth_service.py` and `backend/routers/auth.py` with hardcoded MVP users, signed bearer token, `/auth/login`, and `/auth/me`.
+
 ---
 
 ### [A-14] Inspection plan generator
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** High  
 **Depends on:** A-3, A-5, A-8
 
@@ -659,10 +665,12 @@ GET /api/v1/inspection-plan?city=astana
 - Output is deterministic
 - Highest-risk district appears first
 
+**Notes:** Added `backend/services/inspection_planner.py` and `backend/routers/inspection_plan.py` with deterministic priority rules based on `risk_score` and district top cause.
+
 ---
 
 ### [A-15] Operations log router
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** Medium  
 **Depends on:** A-3, A-11
 
@@ -695,6 +703,8 @@ GET /api/v1/operations/kpi?city=astana
 - Operations list loads from sample CSV
 - KPI endpoint aggregates correctly
 - Response time is numeric and usable in charts
+
+**Notes:** Added `backend/data/sample/astana_operations.csv`, `backend/routers/operations.py`, and `DataLoader.get_operations(city)` for operations listing and KPI aggregation.
 
 ---
 
@@ -950,7 +960,7 @@ Wrap `layout.tsx` in `CityContext.Provider`. All other components read city from
 ---
 
 ### [B-9] Fire stations layer on map
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** High  
 **Depends on:** B-4, A-11
 
@@ -977,10 +987,12 @@ Extend `frontend/src/components/map/RiskMap.tsx`
 - Popups open on click
 - Layer toggle works without page reload
 
+**Notes:** Extended `frontend/src/components/map/RiskMap.tsx` with fire-station markers, popups, and a shared layer toggle.
+
 ---
 
 ### [B-10] Hydrants map layer
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** Medium  
 **Depends on:** B-9, A-12
 
@@ -1003,10 +1015,12 @@ Extend `frontend/src/components/map/RiskMap.tsx`
 - Status color is visible
 - Layer toggle can hide/show hydrants
 
+**Notes:** Extended `frontend/src/components/map/RiskMap.tsx` with hydrant markers, status-based colors, and popup details.
+
 ---
 
 ### [B-11] Frontend auth shell + role guards
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** Medium  
 **Depends on:** B-1, A-13
 
@@ -1025,10 +1039,12 @@ Extend `frontend/src/components/map/RiskMap.tsx`
 - Successful login opens dashboard
 - Role-based UI hiding works
 
+**Notes:** Added `frontend/src/context/AuthContext.tsx`, `frontend/src/lib/auth.ts`, and `frontend/src/app/login/page.tsx` with token persistence, session restore, and reusable `RequireAuth` / `useAuth` helpers.
+
 ---
 
 ### [B-12] Inspection plan panel
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** Medium  
 **Depends on:** B-6, A-14
 
@@ -1048,10 +1064,12 @@ Extend `frontend/src/components/map/RiskMap.tsx`
 - Priority is color-coded
 - Empty/loading states are handled
 
+**Notes:** Added `frontend/src/components/ai/InspectionPlanPanel.tsx` and integrated the panel into the main dashboard.
+
 ---
 
 ### [B-13] Operations analytics panel
-**Status:** `[ ]`  
+**Status:** `[x]`  
 **Priority:** Medium  
 **Depends on:** B-3, B-5, A-15
 
@@ -1069,6 +1087,8 @@ Extend `frontend/src/components/map/RiskMap.tsx`
 - Uses `/operations/kpi`
 - Renders without SSR issues
 - Updates on city change
+
+**Notes:** Added `frontend/src/components/charts/ResponseTimeChart.tsx` and integrated operations analytics into the main dashboard.
 
 ---
 
@@ -1165,11 +1185,11 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 | A-10 Cities router | A | `[x]` | — |
 | A-Inspector Inspector backend | A | `[x]` | B-Inspector |
 | B-Inspector Inspector frontend | B | `[x]` | — |
-| A-11 Fire stations | A | `[ ]` | A-12, B-9 |
-| A-12 Hydrants router | A | `[ ]` | A-11, B-10 |
-| A-13 Minimal auth | A | `[ ]` | B-11 |
-| A-14 Inspection plan | A | `[ ]` | B-12 |
-| A-15 Operations log | A | `[ ]` | B-13 |
+| A-11 Fire stations | A | `[x]` | A-12, B-9 |
+| A-12 Hydrants router | A | `[x]` | A-11, B-10 |
+| A-13 Minimal auth | A | `[x]` | B-11 |
+| A-14 Inspection plan | A | `[x]` | B-12 |
+| A-15 Operations log | A | `[x]` | B-13 |
 | B-1 Frontend scaffold | B | `[x]` | A-1, A-2, C-1 |
 | B-2 City selector | B | `[x]` | B-3, B-4, B-5 |
 | B-3 KPI cards | B | `[x]` | B-2, B-4, B-5 |
@@ -1178,10 +1198,10 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 | B-6 Recommendations | B | `[x]` | B-7, B-8 |
 | B-7 AI chat panel | B | `[x]` | B-6, B-8 |
 | B-8 Telegram panel | B | `[x]` | B-6, B-7 |
-| B-9 Fire stations map | B | `[ ]` | B-10 |
-| B-10 Hydrants layer | B | `[ ]` | — |
-| B-11 Frontend auth | B | `[ ]` | — |
-| B-12 Inspection panel | B | `[ ]` | B-13 |
-| B-13 Operations analytics | B | `[ ]` | — |
+| B-9 Fire stations map | B | `[x]` | B-10 |
+| B-10 Hydrants layer | B | `[x]` | — |
+| B-11 Frontend auth | B | `[x]` | — |
+| B-12 Inspection panel | B | `[x]` | B-13 |
+| B-13 Operations analytics | B | `[x]` | — |
 | C-1 Astana GeoJSON | C | `[x]` | Everything |
 | D-1 Railway config | D | `[x]` | — |

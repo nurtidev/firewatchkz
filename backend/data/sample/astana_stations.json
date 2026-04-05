@@ -1,0 +1,52 @@
+[
+  {
+    "id": "station-1",
+    "city": "astana",
+    "name": "ПЧ-1",
+    "district": "Есіл",
+    "lat": 51.178,
+    "lon": 71.451,
+    "units": 6,
+    "staff_count": 48
+  },
+  {
+    "id": "station-2",
+    "city": "astana",
+    "name": "ПЧ-2",
+    "district": "Алматы",
+    "lat": 51.212,
+    "lon": 71.352,
+    "units": 5,
+    "staff_count": 40
+  },
+  {
+    "id": "station-3",
+    "city": "astana",
+    "name": "ПЧ-3",
+    "district": "Байқоңыр",
+    "lat": 51.143,
+    "lon": 71.404,
+    "units": 7,
+    "staff_count": 54
+  },
+  {
+    "id": "station-4",
+    "city": "astana",
+    "name": "ПЧ-4",
+    "district": "Сарыарқа",
+    "lat": 51.233,
+    "lon": 71.508,
+    "units": 4,
+    "staff_count": 36
+  },
+  {
+    "id": "station-5",
+    "city": "astana",
+    "name": "ПЧ-5",
+    "district": "Нұра",
+    "lat": 51.121,
+    "lon": 71.528,
+    "units": 5,
+    "staff_count": 42
+  }
+]

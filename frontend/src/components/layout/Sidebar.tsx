@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Map, TrendingUp, Lightbulb, MessageSquare, Bell, ClipboardCheck } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useAuth } from '@/context/AuthContext'
 
 const NAV = [
   { href: '/dashboard', label: 'Обзор', icon: LayoutDashboard },
@@ -12,16 +13,17 @@ const NAV = [
   { href: '/dashboard/forecast', label: 'Прогноз', icon: TrendingUp },
   { href: '/dashboard/recommendations', label: 'Рекомендации', icon: Lightbulb },
   { href: '/dashboard/chat', label: 'AI Аналитик', icon: MessageSquare },
-  { href: '/dashboard/alerts', label: 'Уведомления', icon: Bell },
+  { href: '/dashboard/alerts', label: 'Уведомления', icon: Bell, adminOnly: true },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { isAdmin } = useAuth()
 
   return (
     <aside className="w-56 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0">
       <nav className="flex-1 py-4 space-y-1 px-2">
-        {NAV.map(({ href, label, icon: Icon, highlight }) => (
+        {NAV.filter((item) => !item.adminOnly || isAdmin).map(({ href, label, icon: Icon, highlight }) => (
           <Link
             key={href}
             href={href}

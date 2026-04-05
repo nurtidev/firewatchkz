@@ -9,7 +9,21 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import chat, cities, forecast, incidents, inspector, kpi, recommendations, telegram
+from routers import (
+    auth,
+    chat,
+    cities,
+    forecast,
+    hydrants,
+    incidents,
+    inspection_plan,
+    inspector,
+    kpi,
+    operations,
+    recommendations,
+    stations,
+    telegram,
+)
 from services.telegram_service import telegram_service
 
 API_PREFIX = "/api/v1"
@@ -44,12 +58,17 @@ app.add_middleware(
 )
 
 app.include_router(cities.router, prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(incidents.router, prefix=API_PREFIX)
 app.include_router(forecast.router, prefix=API_PREFIX)
 app.include_router(recommendations.router, prefix=API_PREFIX)
 app.include_router(chat.router, prefix=API_PREFIX)
 app.include_router(kpi.router, prefix=API_PREFIX)
 app.include_router(inspector.router, prefix=API_PREFIX)
+app.include_router(inspection_plan.router, prefix=API_PREFIX)
+app.include_router(operations.router, prefix=API_PREFIX)
+app.include_router(stations.router, prefix=API_PREFIX)
+app.include_router(hydrants.router, prefix=API_PREFIX)
 app.include_router(telegram.router, prefix=API_PREFIX)
 
 

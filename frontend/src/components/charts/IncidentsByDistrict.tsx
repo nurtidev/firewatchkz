@@ -38,20 +38,23 @@ export function IncidentsByDistrict() {
   }, [city])
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-4">
-      <h2 className="text-white font-semibold">Инциденты по районам</h2>
+    <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(17,27,46,0.95)_0%,rgba(10,17,30,0.92)_100%)] p-5 flex flex-col gap-4 shadow-[0_24px_60px_rgba(0,0,0,0.22)]">
+      <div>
+        <h2 className="text-white font-semibold">Инциденты по районам</h2>
+        <p className="text-xs text-gray-500 mt-1">Сравнение районов по частоте инцидентов и уровню риска</p>
+      </div>
 
       {loading ? (
-        <div className="h-48 bg-gray-800 rounded animate-pulse" />
+        <div className="h-48 bg-white/6 rounded-2xl animate-pulse" />
       ) : (
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
             <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 11 }} />
             <YAxis
               dataKey="district"
               type="category"
-              tick={{ fill: '#9ca3af', fontSize: 11 }}
+              tick={{ fill: '#cbd5e1', fontSize: 11 }}
               width={72}
             />
             <Tooltip
@@ -62,7 +65,7 @@ export function IncidentsByDistrict() {
                 'Инцидентов',
               ]}
             />
-            <Bar dataKey="total_incidents" radius={[0, 4, 4, 0]}>
+            <Bar dataKey="total_incidents" radius={[0, 10, 10, 0]} barSize={18}>
               {data.map((entry) => (
                 <Cell key={entry.district} fill={riskColor(entry.risk_score)} />
               ))}

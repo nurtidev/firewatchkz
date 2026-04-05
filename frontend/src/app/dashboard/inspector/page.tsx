@@ -159,7 +159,24 @@ export default function InspectorPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [city]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!city) return
+
+    async function syncInspector() {
+      setLoading(true)
+      try {
+        const data = await api.inspector.get(city.id)
+        setAlerts(data)
+        setLastUpdated(new Date())
+      } catch {
+        setAlerts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    syncInspector()
+  }, [city])
 
   const critical = alerts.filter(a => a.priority === 'critical').length
   const high = alerts.filter(a => a.priority === 'high').length

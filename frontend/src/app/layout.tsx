@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "@/context/AuthContext";
 import { CityProvider } from "@/context/CityContext";
 import "./globals.css";
 
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="ru" className="h-full">
       <body className="min-h-full bg-gray-950 text-white antialiased">
-        <CityProvider>{children}</CityProvider>
+        <AuthProvider>
+          <CityProvider>{children}</CityProvider>
+        </AuthProvider>
       </body>
     </html>
   );

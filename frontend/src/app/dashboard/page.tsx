@@ -1,7 +1,17 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { Flame, TrendingDown, TrendingUp, ShieldAlert } from 'lucide-react'
+import { InspectionPlanPanel } from '@/components/ai/InspectionPlanPanel'
+import { RecommendationsPanel } from '@/components/ai/RecommendationCard'
+import { ForecastChart } from '@/components/charts/ForecastChart'
+import { IncidentsByDistrict } from '@/components/charts/IncidentsByDistrict'
+import { ResponseTimeChart } from '@/components/charts/ResponseTimeChart'
+import { StatCard } from '@/components/layout/StatCard'
+import { useCity } from '@/context/CityContext'
+import { api } from '@/lib/api'
+import type { KPI } from '@/lib/types'
 
 const CAUSE_RU: Record<string, string> = {
   electrical: 'электропроводка',
@@ -11,22 +21,14 @@ const CAUSE_RU: Record<string, string> = {
   other: 'прочее',
 }
 
-function translateCause(cause: string): string {
-  return CAUSE_RU[cause] ?? cause
-}
-import dynamic from 'next/dynamic'
-import { StatCard } from '@/components/layout/StatCard'
-import { ForecastChart } from '@/components/charts/ForecastChart'
-import { IncidentsByDistrict } from '@/components/charts/IncidentsByDistrict'
-import { RecommendationsPanel } from '@/components/ai/RecommendationCard'
-import { useCity } from '@/context/CityContext'
-import { api } from '@/lib/api'
-import type { KPI } from '@/lib/types'
-
-const RiskMap = dynamic(() => import('@/components/map/RiskMap').then(m => m.RiskMap), {
+const RiskMap = dynamic(() => import('@/components/map/RiskMap').then((m) => m.RiskMap), {
   ssr: false,
   loading: () => <div className="h-[420px] bg-gray-900 border border-gray-800 rounded-xl animate-pulse" />,
 })
+
+function translateCause(cause: string): string {
+  return CAUSE_RU[cause] ?? cause
+}
 
 function formatTenge(value: number): string {
   if (value >= 1_000_000_000) return `₸${(value / 1_000_000_000).toFixed(1)} млрд`
@@ -41,7 +43,8 @@ function DashboardContent({ cityId }: { cityId: string }) {
   useEffect(() => {
     let cancelled = false
 
-    api.kpi.get(cityId)
+    api.kpi
+      .get(cityId)
       .then(setKpi)
       .catch(() => setKpi(null))
       .finally(() => {
@@ -53,18 +56,19 @@ function DashboardContent({ cityId }: { cityId: string }) {
     }
   }, [cityId])
 
-  const trendDir = kpi
-    ? kpi.vs_last_year_pct > 0 ? 'up' : 'down'
-    : 'neutral'
+  const trendDir = kpi ? (kpi.vs_last_year_pct > 0 ? 'up' : 'down') : 'neutral'
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Пожаров с начала года"
           value={kpi ? String(kpi.total_incidents_ytd) : '—'}
-          sub={kpi ? `${kpi.vs_last_year_pct > 0 ? '+' : ''}${kpi.vs_last_year_pct.toFixed(1)}% к прошлому году` : undefined}
+          sub={
+            kpi
+              ? `${kpi.vs_last_year_pct > 0 ? '+' : ''}${kpi.vs_last_year_pct.toFixed(1)}% к прошлому году`
+              : undefined
+          }
           subTrend={trendDir}
           icon={<Flame size={18} />}
           loading={loading}
@@ -92,7 +96,6 @@ function DashboardContent({ cityId }: { cityId: string }) {
         />
       </div>
 
-      {/* Map + District Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <RiskMap key={`map-${cityId}`} />
@@ -100,10 +103,13 @@ function DashboardContent({ cityId }: { cityId: string }) {
         <IncidentsByDistrict key={`districts-${cityId}`} />
       </div>
 
-      {/* Forecast */}
       <ForecastChart key={`forecast-${cityId}`} />
 
-      {/* Recommendations */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <InspectionPlanPanel key={`inspection-plan-${cityId}`} cityId={cityId} />
+        <ResponseTimeChart key={`operations-${cityId}`} cityId={cityId} />
+      </div>
+
       <RecommendationsPanel key={`recommendations-${cityId}`} />
     </div>
   )
