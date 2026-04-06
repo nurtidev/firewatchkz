@@ -165,7 +165,7 @@ export default function InspectorPage() {
     async function syncInspector() {
       setLoading(true)
       try {
-        const data = await api.inspector.get(city.id)
+        const data = await api.inspector.get(city!.id)
         setAlerts(data)
         setLastUpdated(new Date())
       } catch {
