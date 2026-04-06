@@ -1,0 +1,13 @@
+id,date,city,district,station_id,incident_id,response_time_min,outcome,notes
+op-001,2025-10-03,astana,Есіл,station-1,ast-20251003-0841,6.2,contained,Residential response within target
+op-002,2025-10-05,astana,Алматы,station-2,ast-20251005-0848,7.1,contained,Electrical room fire isolated
+op-003,2025-10-08,astana,Байқоңыр,station-3,ast-20251008-0856,9.4,major_damage,Industrial storage fire
+op-004,2025-10-11,astana,Сарыарқа,station-4,ast-20251011-0865,8.3,contained,Commercial kitchen incident
+op-005,2025-10-14,astana,Нұра,station-5,ast-20251014-0872,10.6,contained,Long approach from arterial road
+op-006,2025-10-18,astana,Есіл,station-1,ast-20251018-0881,5.9,contained,Early dispatch improved arrival
+op-007,2025-10-21,astana,Алматы,station-2,ast-20251021-0887,7.4,contained,Apartment smoke response
+op-008,2025-10-25,astana,Байқоңыр,station-3,ast-20251025-0894,9.8,major_damage,Critical equipment ignition
+op-009,2025-10-29,astana,Сарыарқа,station-4,ast-20251029-0902,8.0,contained,Warehouse alarm confirmed
+op-010,2025-11-02,astana,Нұра,station-5,ast-20251102-0911,11.1,contained,Traffic delay on corridor
+op-011,2025-11-06,astana,Есіл,station-1,ast-20251106-0918,6.0,contained,Office evacuation completed
+op-012,2025-11-10,astana,Алматы,station-2,ast-20251110-0925,7.2,contained,Panel overheating controlled

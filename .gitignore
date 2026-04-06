@@ -34,7 +34,8 @@ data/processed/
 *.csv
 *.xlsx
 *.parquet
-!data/sample/*.csv        # keep sample seed data
+!data/sample/*.csv
+!backend/data/sample/*.csv
 
 # ─── IDE / OS ─────────────────────────────────────────────
 .DS_Store
