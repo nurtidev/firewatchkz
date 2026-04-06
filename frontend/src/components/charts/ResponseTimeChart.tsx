@@ -190,10 +190,10 @@ export function ResponseTimeChart({ cityId }: Props) {
               <Tooltip
                 contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }}
                 labelStyle={{ color: '#f9fafb' }}
-                formatter={(value: number, name: string) => {
-                  if (name === 'Среднее время') return [formatMinutes(value), name]
-                  if (name === 'Количество операций') return [value, name]
-                  return [value, name]
+                formatter={(value, name) => {
+                  const v = value as number
+                  if (name === 'Среднее время') return [formatMinutes(v), name]
+                  return [v, name]
                 }}
               />
               <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 12 }} />

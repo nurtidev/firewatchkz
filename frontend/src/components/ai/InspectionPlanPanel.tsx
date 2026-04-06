@@ -116,7 +116,7 @@ export function InspectionPlanPanel({ cityId, className, title = 'План пр�
       setError(false)
 
       try {
-        const data = await fetchInspectionPlan(activeCityId, controller.signal)
+        const data = await fetchInspectionPlan(activeCityId!, controller.signal)
         setPayload(data)
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') return
