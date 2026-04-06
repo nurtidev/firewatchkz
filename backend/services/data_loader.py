@@ -16,13 +16,13 @@ CITY_CONFIG = {
         "center": [51.1801, 71.4460],
         "zoom": 12,
         "data_path": "data/sample/astana_incidents.csv",
-        "geojson_path": "backend/data/geojson/astana_districts.geojson",
+        "geojson_path": "data/geojson/astana_districts.geojson",
     }
 }
 
 _DATAFRAME_CACHE: dict[str, pd.DataFrame] = {}
 _JSON_CACHE: dict[str, list[dict]] = {}
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 class DataLoader:
@@ -129,7 +129,7 @@ class DataLoader:
         city_key = self._validate_city(city)
         cache_key = f"operations:{city_key}"
         if cache_key not in _DATAFRAME_CACHE:
-            csv_path = _PROJECT_ROOT / "backend" / "data" / "sample" / f"{city_key}_operations.csv"
+            csv_path = _BACKEND_ROOT / "data" / "sample" / f"{city_key}_operations.csv"
             dataframe = pd.read_csv(csv_path)
             dataframe["date"] = pd.to_datetime(dataframe["date"], format="%Y-%m-%d")
             dataframe["response_time_min"] = dataframe["response_time_min"].astype(float)
@@ -144,7 +144,7 @@ class DataLoader:
 
         cache_key = f"buildings:{city_key}"
         if cache_key not in _JSON_CACHE:
-            json_path = _PROJECT_ROOT / "backend" / "data" / "sample" / f"{city_key}_buildings.json"
+            json_path = _BACKEND_ROOT / "data" / "sample" / f"{city_key}_buildings.json"
             if not json_path.exists():
                 return []
             with json_path.open(encoding="utf-8") as file:
@@ -153,7 +153,7 @@ class DataLoader:
 
     def get_district_centroids(self, city: str) -> dict[str, tuple[float, float]]:
         city_key = self._validate_city(city)
-        geojson_path = _PROJECT_ROOT / CITY_CONFIG[city_key]["geojson_path"]
+        geojson_path = _BACKEND_ROOT / CITY_CONFIG[city_key]["geojson_path"]
         payload = json.loads(geojson_path.read_text(encoding="utf-8"))
         centroids: dict[str, tuple[float, float]] = {}
 
@@ -176,7 +176,7 @@ class DataLoader:
         return _DATAFRAME_CACHE[city_key]
 
     def _load_city_dataframe(self, city: str) -> pd.DataFrame:
-        csv_path = _PROJECT_ROOT / CITY_CONFIG[city]["data_path"]
+        csv_path = _BACKEND_ROOT / CITY_CONFIG[city]["data_path"]
         dataframe = pd.read_csv(csv_path)
         dataframe["date"] = pd.to_datetime(dataframe["date"], format="%Y-%m-%d")
         dataframe["casualties"] = dataframe["casualties"].astype(int)
@@ -186,7 +186,7 @@ class DataLoader:
     def _load_json_records(self, city: str, resource_name: str) -> list[dict]:
         cache_key = f"{resource_name}:{city}"
         if cache_key not in _JSON_CACHE:
-            json_path = _PROJECT_ROOT / "backend" / "data" / "sample" / f"{city}_{resource_name}.json"
+            json_path = _BACKEND_ROOT / "data" / "sample" / f"{city}_{resource_name}.json"
             with json_path.open(encoding="utf-8") as file:
                 _JSON_CACHE[cache_key] = json.load(file)
         return _JSON_CACHE[cache_key]

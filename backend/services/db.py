@@ -9,11 +9,11 @@ import psycopg
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_MIGRATIONS_DIR = _PROJECT_ROOT / "backend" / "migrations"
-_SEED_DIR = _PROJECT_ROOT / "backend" / "data" / "sample"
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_MIGRATIONS_DIR = _BACKEND_ROOT / "migrations"
+_SEED_DIR = _BACKEND_ROOT / "data" / "sample"
 
-load_dotenv(_PROJECT_ROOT / "backend" / ".env")
+load_dotenv()
 
 
 class DatabaseService:
