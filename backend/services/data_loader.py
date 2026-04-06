@@ -129,11 +129,15 @@ class DataLoader:
         city_key = self._validate_city(city)
         cache_key = f"operations:{city_key}"
         if cache_key not in _DATAFRAME_CACHE:
-            csv_path = _BACKEND_ROOT / "data" / "sample" / f"{city_key}_operations.csv"
-            dataframe = pd.read_csv(csv_path)
-            dataframe["date"] = pd.to_datetime(dataframe["date"], format="%Y-%m-%d")
-            dataframe["response_time_min"] = dataframe["response_time_min"].astype(float)
-            _DATAFRAME_CACHE[cache_key] = dataframe.sort_values("date").reset_index(drop=True)
+            db_df = database_service.get_operations_df(city_key)
+            if db_df is not None and not db_df.empty:
+                _DATAFRAME_CACHE[cache_key] = db_df.sort_values("date").reset_index(drop=True)
+            else:
+                csv_path = _BACKEND_ROOT / "data" / "sample" / f"{city_key}_operations.csv"
+                dataframe = pd.read_csv(csv_path)
+                dataframe["date"] = pd.to_datetime(dataframe["date"], format="%Y-%m-%d")
+                dataframe["response_time_min"] = dataframe["response_time_min"].astype(float)
+                _DATAFRAME_CACHE[cache_key] = dataframe.sort_values("date").reset_index(drop=True)
         return _DATAFRAME_CACHE[cache_key].copy()
 
     def get_buildings(self, city: str) -> list[dict]:
@@ -176,6 +180,10 @@ class DataLoader:
         return _DATAFRAME_CACHE[city_key]
 
     def _load_city_dataframe(self, city: str) -> pd.DataFrame:
+        db_df = database_service.get_incidents_df(city)
+        if db_df is not None and not db_df.empty:
+            return db_df.sort_values("date").reset_index(drop=True)
+
         csv_path = _BACKEND_ROOT / CITY_CONFIG[city]["data_path"]
         dataframe = pd.read_csv(csv_path)
         dataframe["date"] = pd.to_datetime(dataframe["date"], format="%Y-%m-%d")

@@ -36,6 +36,8 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 async def lifespan(_: FastAPI):
     database_service.apply_migrations()
     database_service.seed_buildings()
+    database_service.seed_incidents()
+    database_service.seed_operations()
     if telegram_service.is_configured() and not scheduler.running:
         scheduler.add_job(
             telegram_service.send_test_alert,

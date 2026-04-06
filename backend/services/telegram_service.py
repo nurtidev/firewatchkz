@@ -28,17 +28,31 @@ class TelegramService:
 
         city_config = CITY_CONFIG.get(city.lower())
         district_stats = data_loader.get_district_stats(city)
-        highest_risk = district_stats.sort_values("risk_score", ascending=False).iloc[0]
-        message = (
-            f"🔥 FireWatch Alert — {city_config['name']}\n"
-            "Severity: HIGH\n"
-            f"District: {highest_risk['district']}\n"
-            f"Risk score: {highest_risk['risk_score']}/100\n"
-            "Recommended: preventive inspection"
-        )
+        top3 = district_stats.sort_values("risk_score", ascending=False).head(3)
+        highest_risk = top3.iloc[0]
+
+        lines = [f"🔥 <b>FireWatch — {city_config['name']}</b>", ""]
+        lines.append("⚠️ <b>Районы высокого риска на сегодня:</b>")
+        for _, row in top3.iterrows():
+            bar = "█" * int(row["risk_score"] / 10) + "░" * (10 - int(row["risk_score"] / 10))
+            lines.append(
+                f"  • <b>{row['district']}</b> — риск {row['risk_score']:.0f}/100\n"
+                f"    {bar}\n"
+                f"    Инцидентов (12 мес): {row['total_incidents']}  |  "
+                f"Ср. ущерб: {int(row['avg_damage_tenge']):,} ₸".replace(",", " ")
+            )
+
+        lines += [
+            "",
+            f"🏆 Самый опасный район: <b>{highest_risk['district']}</b>",
+            "📋 Рекомендуется: провести профилактическую инспекцию",
+            "",
+            "<i>FireWatch · Ежедневный дайджест</i>",
+        ]
+        message = "\n".join(lines)
 
         bot = Bot(token=self.bot_token)
-        sent = await bot.send_message(chat_id=self.chat_id, text=message)
+        sent = await bot.send_message(chat_id=self.chat_id, text=message, parse_mode="HTML")
         return {"status": "sent", "message_id": sent.message_id}
 
     def get_config(self) -> dict[str, Any]:
