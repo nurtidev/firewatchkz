@@ -1302,7 +1302,7 @@ backend/
 ---
 
 ### [E-3] Migration: core entities
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** E-2
 
@@ -1334,7 +1334,7 @@ backend/
 ---
 
 ### [E-4] Migration: incidents, hydrants, stations, operations
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** E-3
 
@@ -1355,7 +1355,7 @@ backend/
 ---
 
 ### [E-5] Migration: documents (operational_cards + card_extractions)
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** E-3
 
@@ -1459,7 +1459,7 @@ class BuildingsProvider(ABC):
 ---
 
 ### [F-1] Cloudflare R2 storage integration
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** E-2
 
@@ -1496,7 +1496,7 @@ R2_PUBLIC_URL=https://...
 ---
 
 ### [F-2] Celery + Redis async workers
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** E-2
 
@@ -2254,14 +2254,14 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 |---|---|---|---|---|
 | E-1 Postgres+PostGIS Railway | E | `[x]` | 1 | — |
 | E-2 SQLAlchemy + Alembic | E | `[x]` | 1 | E-1 |
-| E-3 Migration: core entities | E | `[ ]` | 1 | E-2 |
-| E-4 Migration: incidents+hydrants | E | `[ ]` | 1 | E-3 |
-| E-5 Migration: documents | E | `[ ]` | 1 | E-3 |
+| E-3 Migration: core entities | E | `[x]` | 1 | E-2 |
+| E-4 Migration: incidents+hydrants | E | `[x]` | 1 | E-3 |
+| E-5 Migration: documents | E | `[x]` | 1 | E-3 |
 | E-6 CSV → Postgres script | E | `[ ]` | 1 | E-4 |
 | E-7 data_loader_v2 | E | `[ ]` | 1 | E-6 |
 | E-8 BuildingsProvider abstraction | E | `[ ]` | 1 | E-3 |
-| F-1 R2 storage | F | `[ ]` | 1 | E-2 |
-| F-2 Celery+Redis | F | `[ ]` | 1 | E-2 |
+| F-1 R2 storage | F | `[x]` | 1 | E-2 |
+| F-2 Celery+Redis | F | `[x]` | 1 | E-2 |
 | F-3 Upload + normalization | F | `[ ]` | 1 | E-5, F-1, F-2 |
 | F-4 Synthetic cards generator | F | `[x]` | 1 | — |
 | F-5 Pydantic + Claude tool | F | `[ ]` | 1 | F-3 |

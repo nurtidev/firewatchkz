@@ -2,3 +2,10 @@ from models.city import City
 from models.building import Building
 from models.user import User
 from models.audit_log import AuditLog
+from models.incident import Incident
+from models.hydrant import Hydrant
+from models.fire_station import FireStation
+from models.operation import Operation
+from models.inspection import Inspection
+from models.operational_card import OperationalCard
+from models.card_extraction import CardExtraction

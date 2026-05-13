@@ -14,6 +14,13 @@ from models.city import City          # noqa: F401
 from models.building import Building  # noqa: F401
 from models.user import User          # noqa: F401
 from models.audit_log import AuditLog # noqa: F401
+from models.incident import Incident      # noqa: F401
+from models.hydrant import Hydrant        # noqa: F401
+from models.fire_station import FireStation  # noqa: F401
+from models.operation import Operation    # noqa: F401
+from models.inspection import Inspection  # noqa: F401
+from models.operational_card import OperationalCard  # noqa: F401
+from models.card_extraction import CardExtraction    # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
