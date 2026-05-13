@@ -6,7 +6,11 @@
     "address": "ул. Тәуелсіздік 10",
     "lat": 51.210,
     "lon": 71.349,
-    "status": "working"
+    "status": "working",
+    "last_checked": "2026-02-14",
+    "winter_accessible": true,
+    "pressure_bar": 4.2,
+    "notes": null
   },
   {
     "id": "hydrant-2",
@@ -15,7 +19,11 @@
     "address": "пр. Кабанбай батыра 42",
     "lat": 51.183,
     "lon": 71.468,
-    "status": "working"
+    "status": "working",
+    "last_checked": "2026-01-20",
+    "winter_accessible": true,
+    "pressure_bar": 3.8,
+    "notes": null
   },
   {
     "id": "hydrant-3",
@@ -24,7 +32,11 @@
     "address": "ул. Жангельдина 17",
     "lat": 51.139,
     "lon": 71.397,
-    "status": "maintenance"
+    "status": "maintenance",
+    "last_checked": "2025-11-05",
+    "winter_accessible": false,
+    "pressure_bar": null,
+    "notes": "Плановая замена уплотнительных колец, завершение 30.04.2026"
   },
   {
     "id": "hydrant-4",
@@ -33,7 +45,11 @@
     "address": "пр. Республики 58",
     "lat": 51.236,
     "lon": 71.501,
-    "status": "working"
+    "status": "working",
+    "last_checked": "2026-03-01",
+    "winter_accessible": true,
+    "pressure_bar": 4.5,
+    "notes": null
   },
   {
     "id": "hydrant-5",
@@ -42,7 +58,11 @@
     "address": "ул. Сыганак 21",
     "lat": 51.122,
     "lon": 71.531,
-    "status": "out_of_service"
+    "status": "out_of_service",
+    "last_checked": "2025-08-12",
+    "winter_accessible": false,
+    "pressure_bar": null,
+    "notes": "Засыпан асфальтом при ремонте дороги, требует восстановления"
   },
   {
     "id": "hydrant-6",
@@ -51,6 +71,10 @@
     "address": "ул. Бауыржана Момышулы 12",
     "lat": 51.224,
     "lon": 71.362,
-    "status": "maintenance"
+    "status": "maintenance",
+    "last_checked": "2025-12-18",
+    "winter_accessible": true,
+    "pressure_bar": 2.1,
+    "notes": "Низкое давление, ожидает диагностики насосной станции"
   }
 ]

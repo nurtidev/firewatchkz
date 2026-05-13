@@ -91,3 +91,83 @@ export interface Incident {
   lat: number
   lon: number
 }
+
+export interface Building {
+  id: string
+  city: string
+  district: string | null
+  name: string
+  address: string | null
+  object_type: string | null
+  floors_count: number | null
+  total_area: number | null
+  fire_resistance_degree: string | null
+  construction_type: string | null
+  nearest_fire_department: string | null
+  distance_to_fire_department: number | null
+  arrival_time_minutes: number | null
+  route_description: string | null
+  fire_rank: string | null
+  owner_name: string | null
+  owner_phone: string | null
+  technical_manager_name: string | null
+  technical_manager_phone: string | null
+  security_phone: string | null
+  dispatcher_phone: string | null
+  power_supply_info: string | null
+  heating_info: string | null
+  water_supply_info: string | null
+  ventilation_info: string | null
+  smoke_removal_info: string | null
+  fire_alarm_info: string | null
+  fire_extinguishing_systems: Record<string, string> | null
+  evacuation_routes_count: number | null
+  potential_hazards: string | null
+  complexity_features: string | null
+  auxiliary_means: string | null
+  estimated_forces: Record<string, unknown> | null
+  lat: number | null
+  lon: number | null
+}
+
+export interface Hydrant {
+  id: string
+  city: string
+  district: string
+  address: string
+  lat: number
+  lon: number
+  status: 'working' | 'maintenance' | 'out_of_service'
+  last_checked: string | null
+  winter_accessible: boolean | null
+  pressure_bar: number | null
+  notes: string | null
+}
+
+export interface HydrantUpdate {
+  status?: 'working' | 'maintenance' | 'out_of_service'
+  last_checked?: string
+  winter_accessible?: boolean
+  pressure_bar?: number
+  notes?: string
+}
+
+export interface RouteEstimate {
+  normal_min: number
+  emergency_min: number
+  savings_min: number
+  distance_km: number
+  geometry: [number, number][] | null
+  source: 'osrm' | 'haversine'
+  route_notes: string
+  city: string
+  station_id?: string
+}
+
+export interface RoutingStation {
+  id: string
+  name: string
+  district: string
+  lat: number
+  lon: number
+}

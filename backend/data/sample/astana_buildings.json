@@ -1,5 +1,6 @@
 [
   {
+    "id": "building-highvill",
     "city": "astana",
     "district": "Есіл",
     "name": "Хайвилл-Астана",
@@ -47,6 +48,7 @@
     "source": "nurtidev/firewatch docs"
   },
   {
+    "id": "building-alanda",
     "city": "astana",
     "district": "Алматы",
     "name": "Аланда",
@@ -87,6 +89,7 @@
     "source": "nurtidev/firewatch docs"
   },
   {
+    "id": "building-eurasia3",
     "city": "astana",
     "district": null,
     "name": "Евразия-3",

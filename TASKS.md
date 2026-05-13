@@ -1239,7 +1239,7 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 ---
 
 ### [E-1] Railway Postgres + PostGIS setup
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** nothing
 
@@ -1261,7 +1261,7 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 ---
 
 ### [E-2] SQLAlchemy + Alembic scaffold
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** E-1
 
@@ -2252,8 +2252,8 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 
 | Task | Track | Status | Phase | Depends on |
 |---|---|---|---|---|
-| E-1 Postgres+PostGIS Railway | E | `[ ]` | 1 | — |
-| E-2 SQLAlchemy + Alembic | E | `[ ]` | 1 | E-1 |
+| E-1 Postgres+PostGIS Railway | E | `[x]` | 1 | — |
+| E-2 SQLAlchemy + Alembic | E | `[x]` | 1 | E-1 |
 | E-3 Migration: core entities | E | `[ ]` | 1 | E-2 |
 | E-4 Migration: incidents+hydrants | E | `[ ]` | 1 | E-3 |
 | E-5 Migration: documents | E | `[ ]` | 1 | E-3 |

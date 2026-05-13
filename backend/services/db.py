@@ -5,7 +5,7 @@ import os
 import sys
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -421,6 +421,36 @@ class DatabaseService:
             if isinstance(row.get("estimated_forces"), str):
                 row["estimated_forces"] = json.loads(row["estimated_forces"])
         return rows
+
+    def get_building_by_id(self, building_id: str) -> Optional[dict[str, Any]]:
+        if not self.is_configured():
+            return None
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, city, district, name, address, object_type, document_type,
+                        category, fire_resistance_degree, floors_count, total_area,
+                        construction_type, nearest_fire_department, distance_to_fire_department,
+                        arrival_time_minutes, route_description, fire_rank,
+                        owner_name, owner_phone, technical_manager_name, technical_manager_phone,
+                        security_phone, dispatcher_phone, private_fire_service_phone,
+                        power_supply_info, heating_info, water_supply_info, ventilation_info,
+                        smoke_removal_info, fire_alarm_info, fire_extinguishing_systems,
+                        evacuation_routes_count, potential_hazards, complexity_features,
+                        auxiliary_means, estimated_forces, lat, lon, source
+                    FROM buildings WHERE id::text = %s
+                    """,
+                    (building_id,),
+                )
+                row = cur.fetchone()
+        if not row:
+            return None
+        if isinstance(row.get("fire_extinguishing_systems"), str):
+            row["fire_extinguishing_systems"] = json.loads(row["fire_extinguishing_systems"])
+        if isinstance(row.get("estimated_forces"), str):
+            row["estimated_forces"] = json.loads(row["estimated_forces"])
+        return row
 
 
 database_service = DatabaseService()

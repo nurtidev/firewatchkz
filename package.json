@@ -1,0 +1,29 @@
+{
+  "name": "firewatchkz",
+  "version": "1.0.0",
+  "description": "> Предиктивная аналитика и AI-рекомендации для служб пожарной безопасности.   > Multi-city SaaS. Одно развёртывание — любой город.",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:mobile": "playwright test --project=mobile",
+    "test:headed": "playwright test --headed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nurtidev/firewatchkz.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nurtidev/firewatchkz/issues"
+  },
+  "homepage": "https://github.com/nurtidev/firewatchkz#readme",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

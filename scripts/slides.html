@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #0a0d14; }
+
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: #0a0d14;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── shared decorations ── */
+  .glow-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(249,115,22,0.15);
+    border: 1px solid rgba(249,115,22,0.35);
+    color: #fb923c;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+  .badge {
+    background: rgba(249,115,22,0.2);
+    color: #fb923c;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ══════════════════════════════════════════
+     SLIDE 1 — TITLE
+  ══════════════════════════════════════════ */
+  #s1 {
+    justify-content: center;
+    align-items: flex-start;
+    padding: 72px 96px;
+  }
+  #s1 .orb1 { width: 500px; height: 500px; background: rgba(249,115,22,0.18); top: -120px; right: -80px; }
+  #s1 .orb2 { width: 300px; height: 300px; background: rgba(239,68,68,0.12); bottom: -60px; left: 200px; }
+  #s1 .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 48px; }
+  #s1 .logo-icon {
+    width: 48px; height: 48px; background: linear-gradient(135deg,#f97316,#ef4444);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  #s1 .logo-text { font-size: 18px; font-weight: 700; color: #fb923c; letter-spacing: .04em; }
+  #s1 h1 { font-size: 72px; font-weight: 900; line-height: 1.0; letter-spacing: -.02em; margin-bottom: 24px; }
+  #s1 h1 span { background: linear-gradient(90deg,#f97316,#fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  #s1 .subtitle { font-size: 22px; color: #94a3b8; font-weight: 400; max-width: 560px; line-height: 1.5; margin-bottom: 48px; }
+  #s1 .meta { font-size: 14px; color: #475569; }
+  #s1 .meta strong { color: #64748b; }
+
+  /* ══════════════════════════════════════════
+     SLIDE 2 — PROBLEM
+  ══════════════════════════════════════════ */
+  #s2 { padding: 64px 96px; justify-content: center; }
+  #s2 .orb1 { width: 400px; height: 400px; background: rgba(239,68,68,0.12); top: -100px; right: -50px; }
+  #s2 .slide-header { margin-bottom: 52px; }
+  #s2 h2 { font-size: 48px; font-weight: 800; line-height: 1.1; margin-top: 16px; }
+  #s2 h2 em { font-style: normal; color: #f97316; }
+  #s2 .cards { display: flex; gap: 24px; }
+  #s2 .card {
+    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 32px 28px;
+  }
+  #s2 .card .icon { font-size: 36px; margin-bottom: 16px; }
+  #s2 .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  #s2 .card p { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+  #s2 .card .highlight { color: #f97316; font-weight: 600; }
+
+  /* ══════════════════════════════════════════
+     SLIDE 3 — VALIDATION
+  ══════════════════════════════════════════ */
+  #s3 { padding: 64px 96px; justify-content: center; align-items: flex-start; }
+  #s3 .orb1 { width: 350px; height: 350px; background: rgba(249,115,22,0.15); bottom: -80px; right: 100px; }
+  #s3 .slide-header { margin-bottom: 48px; }
+  #s3 h2 { font-size: 48px; font-weight: 800; margin-top: 16px; }
+  #s3 .quote-block {
+    background: rgba(249,115,22,0.08);
+    border-left: 4px solid #f97316;
+    border-radius: 0 12px 12px 0;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    max-width: 900px;
+  }
+  #s3 .quote-block p { font-size: 22px; line-height: 1.6; color: #e2e8f0; font-style: italic; }
+  #s3 .quote-block .source { font-size: 14px; color: #64748b; margin-top: 16px; font-style: normal; }
+  #s3 .facts { display: flex; gap: 20px; }
+  #s3 .fact {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 12px 20px; font-size: 14px; color: #cbd5e1;
+  }
+  #s3 .fact .dot { width: 8px; height: 8px; background: #f97316; border-radius: 50%; flex-shrink: 0; }
+
+  /* ══════════════════════════════════════════
+     SLIDE 4 — SOLUTION
+  ══════════════════════════════════════════ */
+  #s4 { padding: 64px 96px; justify-content: center; }
+  #s4 .orb1 { width: 450px; height: 450px; background: rgba(249,115,22,0.12); top: -100px; left: -100px; }
+  #s4 .slide-header { margin-bottom: 52px; }
+  #s4 h2 { font-size: 48px; font-weight: 800; margin-top: 16px; }
+  #s4 h2 span { color: #f97316; }
+  #s4 .modules { display: flex; gap: 24px; }
+  #s4 .module {
+    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 36px 28px; position: relative; overflow: hidden;
+  }
+  #s4 .module.active { border-color: rgba(249,115,22,0.4); background: rgba(249,115,22,0.06); }
+  #s4 .module .num { font-size: 64px; font-weight: 900; color: rgba(255,255,255,0.05); position: absolute; top: 12px; right: 20px; line-height: 1; }
+  #s4 .module .icon { font-size: 40px; margin-bottom: 20px; }
+  #s4 .module h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+  #s4 .module p { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+  #s4 .module ul { list-style: none; margin-top: 16px; }
+  #s4 .module ul li { font-size: 13px; color: #64748b; padding: 4px 0; padding-left: 16px; position: relative; }
+  #s4 .module ul li::before { content: '→'; position: absolute; left: 0; color: #f97316; }
+
+  /* ══════════════════════════════════════════
+     SLIDE 5 — DEMO DASHBOARD
+  ══════════════════════════════════════════ */
+  #s5 { padding: 0; flex-direction: row; }
+  #s5 .left { width: 340px; flex-shrink: 0; padding: 64px 48px; display: flex; flex-direction: column; justify-content: center; background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.06); }
+  #s5 .left h2 { font-size: 36px; font-weight: 800; margin: 16px 0 20px; line-height: 1.2; }
+  #s5 .left p { font-size: 15px; color: #94a3b8; line-height: 1.6; margin-bottom: 28px; }
+  #s5 .stat { margin-bottom: 20px; }
+  #s5 .stat .val { font-size: 32px; font-weight: 800; color: #f97316; }
+  #s5 .stat .lbl { font-size: 13px; color: #64748b; margin-top: 2px; }
+  #s5 .right { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  #s5 .right img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  #s5 .right .overlay { position: absolute; left: 0; top: 0; bottom: 0; width: 40px; background: linear-gradient(to right, rgba(10,13,20,0.8), transparent); }
+
+  /* ══════════════════════════════════════════
+     SLIDE 6 — INSPECTOR
+  ══════════════════════════════════════════ */
+  #s6 { padding: 0; flex-direction: row; }
+  #s6 .right { width: 340px; flex-shrink: 0; padding: 64px 48px; display: flex; flex-direction: column; justify-content: center; background: rgba(255,255,255,0.02); border-left: 1px solid rgba(255,255,255,0.06); }
+  #s6 .right h2 { font-size: 34px; font-weight: 800; margin: 16px 0 20px; line-height: 1.2; }
+  #s6 .right p { font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
+  #s6 .pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.3); color: #fb923c; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 20px; margin-bottom: 12px; }
+  #s6 .steps { list-style: none; }
+  #s6 .steps li { font-size: 13px; color: #94a3b8; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: center; }
+  #s6 .steps li span.num { width: 22px; height: 22px; background: rgba(249,115,22,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #f97316; flex-shrink: 0; }
+  #s6 .left { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; }
+  #s6 .left img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  #s6 .left .overlay { position: absolute; right: 0; top: 0; bottom: 0; width: 40px; background: linear-gradient(to left, rgba(10,13,20,0.8), transparent); }
+
+  /* ══════════════════════════════════════════
+     SLIDE 7 — FORECAST
+  ══════════════════════════════════════════ */
+  #s7 { padding: 0; flex-direction: column; }
+  #s7 .top { padding: 40px 96px 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+  #s7 .top-left h2 { font-size: 40px; font-weight: 800; margin: 12px 0 8px; }
+  #s7 .top-left p { font-size: 15px; color: #94a3b8; }
+  #s7 .metrics { display: flex; gap: 32px; }
+  #s7 .metric .val { font-size: 36px; font-weight: 800; color: #f97316; line-height: 1; }
+  #s7 .metric .lbl { font-size: 12px; color: #64748b; margin-top: 4px; }
+  #s7 .img-wrap { flex: 1; overflow: hidden; position: relative; }
+  #s7 .img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  #s7 .img-wrap .overlay-b { position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(to top, #0a0d14, transparent); }
+
+  /* ══════════════════════════════════════════
+     SLIDE 8 — BUSINESS MODEL
+  ══════════════════════════════════════════ */
+  #s8 { padding: 64px 96px; justify-content: center; }
+  #s8 .orb1 { width: 400px; height: 400px; background: rgba(249,115,22,0.1); bottom: -100px; right: -50px; }
+  #s8 .slide-header { margin-bottom: 48px; }
+  #s8 h2 { font-size: 48px; font-weight: 800; margin-top: 16px; }
+  #s8 .bm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  #s8 .bm-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 28px;
+  }
+  #s8 .bm-card h3 { font-size: 13px; font-weight: 600; color: #f97316; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; }
+  #s8 .bm-card .big { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  #s8 .bm-card p { font-size: 14px; color: #94a3b8; line-height: 1.5; }
+  #s8 .stages { display: flex; align-items: center; gap: 0; margin-top: 32px; }
+  #s8 .stage { flex: 1; text-align: center; position: relative; }
+  #s8 .stage .dot { width: 12px; height: 12px; background: #f97316; border-radius: 50%; margin: 0 auto 8px; }
+  #s8 .stage .dot.dim { background: #334155; }
+  #s8 .stage::after { content: ''; position: absolute; top: 5px; left: 50%; width: 100%; height: 2px; background: linear-gradient(to right, #f97316, #334155); }
+  #s8 .stage:last-child::after { display: none; }
+  #s8 .stage .name { font-size: 13px; font-weight: 600; }
+  #s8 .stage .name.dim { color: #475569; }
+  #s8 .stage .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  /* ══════════════════════════════════════════
+     SLIDE 9 — TEAM
+  ══════════════════════════════════════════ */
+  #s9 { padding: 64px 96px; justify-content: center; align-items: flex-start; }
+  #s9 .orb1 { width: 350px; height: 350px; background: rgba(249,115,22,0.12); top: -60px; right: -60px; }
+  #s9 .slide-header { margin-bottom: 56px; }
+  #s9 h2 { font-size: 48px; font-weight: 800; margin-top: 16px; }
+  #s9 .team { display: flex; gap: 32px; }
+  #s9 .member {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 36px 40px; flex: 1;
+  }
+  #s9 .member .avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #ef4444);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: white; margin-bottom: 20px;
+  }
+  #s9 .member h3 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  #s9 .member .role { font-size: 14px; color: #f97316; font-weight: 600; margin-bottom: 16px; }
+  #s9 .member ul { list-style: none; }
+  #s9 .member ul li { font-size: 14px; color: #94a3b8; padding: 5px 0; padding-left: 16px; position: relative; }
+  #s9 .member ul li::before { content: '·'; position: absolute; left: 4px; color: #f97316; font-size: 18px; line-height: 1; top: 3px; }
+
+  /* ══════════════════════════════════════════
+     SLIDE 10 — ASK / CTA
+  ══════════════════════════════════════════ */
+  #s10 { padding: 64px 96px; justify-content: center; align-items: flex-start; }
+  #s10 .orb1 { width: 600px; height: 600px; background: rgba(249,115,22,0.1); top: -200px; right: -200px; }
+  #s10 .orb2 { width: 300px; height: 300px; background: rgba(239,68,68,0.08); bottom: -80px; left: -60px; }
+  #s10 .slide-header { margin-bottom: 52px; }
+  #s10 h2 { font-size: 48px; font-weight: 800; margin-top: 16px; line-height: 1.1; }
+  #s10 h2 em { font-style: normal; color: #f97316; }
+  #s10 .asks { display: flex; flex-direction: column; gap: 16px; max-width: 800px; }
+  #s10 .ask-row {
+    display: flex; align-items: flex-start; gap: 20px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 22px 28px;
+  }
+  #s10 .ask-row .icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+  #s10 .ask-row h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  #s10 .ask-row p { font-size: 14px; color: #94a3b8; }
+  #s10 .prize {
+    margin-top: 32px; display: flex; align-items: center; gap: 20px;
+    background: linear-gradient(90deg, rgba(249,115,22,0.12), rgba(249,115,22,0.04));
+    border: 1px solid rgba(249,115,22,0.25); border-radius: 14px; padding: 20px 28px;
+  }
+  #s10 .prize .amount { font-size: 36px; font-weight: 900; color: #f97316; }
+  #s10 .prize .label { font-size: 14px; color: #94a3b8; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 1 — TITLE
+════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="glow-orb orb1"></div>
+  <div class="glow-orb orb2"></div>
+  <div class="logo-row">
+    <div class="logo-icon">🔥</div>
+    <div class="logo-text">FIREWATCH KZ</div>
+  </div>
+  <h1>Цифровой штаб<br><span>пожарной службы</span></h1>
+  <p class="subtitle">AI-аналитика рисков, карта гидрантов и цифровые карточки объектов — в одном рабочем столе для инспектора</p>
+  <p class="meta"><strong>Pizza Pitch · 24 апреля 2026 · Astana Hub</strong></p>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 2 — PROBLEM
+════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="glow-orb orb1"></div>
+  <div class="slide-header">
+    <div class="tag">🔴 Проблема</div>
+    <h2>Как сейчас работает<br><em>пожарный инспектор</em></h2>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <div class="icon">📋</div>
+      <h3>Бумажные карточки</h3>
+      <p>Оперативные планы и карточки объектов — <span class="highlight">только на бумаге</span>. Обновить или найти нужный документ — часы работы.</p>
+    </div>
+    <div class="card">
+      <div class="icon">💧</div>
+      <h3>Гидранты в тетрадях</h3>
+      <p>Где ближайший гидрант? Когда обслуживался? С какой стороны подъезд? — <span class="highlight">никто не знает быстро</span>.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📊</div>
+      <h3>Ноль аналитики</h3>
+      <p>Кого проверять первым? Какой район в зоне риска? Решения принимаются <span class="highlight">на интуиции</span>, не на данных.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 3 — VALIDATION
+════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="glow-orb orb1"></div>
+  <div class="slide-header">
+    <div class="tag">✅ Валидация</div>
+    <h2>Мы пришли и спросили</h2>
+  </div>
+  <div class="quote-block">
+    <p>«Оперативные карточки — всё на бумаге. Сложно поддерживать актуальность и контролировать. Нужен цифровой план гидрантов: когда обслуживались, в каком состоянии, с какой стороны лучше подъехать.»</p>
+    <div class="source">— Сотрудник пожарной части, г. Астана · Полевые интервью 2025</div>
+  </div>
+  <div class="facts">
+    <div class="fact"><div class="dot"></div>Провели интервью в пожарной части г. Астана</div>
+    <div class="fact"><div class="dot"></div>Собирали фидбек о реальных болях в работе</div>
+    <div class="fact"><div class="dot"></div>Целевой пилот: ДЧС г. Астана</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 4 — SOLUTION
+════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="glow-orb orb1"></div>
+  <div class="slide-header">
+    <div class="tag">💡 Решение</div>
+    <h2>FireWatch KZ — <span>один рабочий стол</span></h2>
+  </div>
+  <div class="modules">
+    <div class="module">
+      <div class="num">1</div>
+      <div class="icon">📋</div>
+      <h3>Цифровые карточки</h3>
+      <p>Оперативные карточки объектов в цифровом виде. Актуально, доступно, с историей изменений.</p>
+      <ul>
+        <li>Поиск по адресу и типу</li>
+        <li>Фото и схемы</li>
+        <li>История инспекций</li>
+      </ul>
+    </div>
+    <div class="module">
+      <div class="num">2</div>
+      <div class="icon">💧</div>
+      <h3>Карта гидрантов</h3>
+      <p>Интерактивная карта всех гидрантов с датами обслуживания и лучшими маршрутами подъезда.</p>
+      <ul>
+        <li>Статус и состояние</li>
+        <li>Дата последнего ТО</li>
+        <li>Оптимальный подъезд</li>
+      </ul>
+    </div>
+    <div class="module active">
+      <div class="num">3</div>
+      <div class="icon">🤖</div>
+      <h3>AI-аналитика рисков</h3>
+      <p>Прогноз пожаров, карта рисков, AI-рекомендации и автоматическая приоритизация проверок.</p>
+      <ul>
+        <li>Прогноз R²=0.82</li>
+        <li>Risk score 0–100</li>
+        <li>Claude AI рекомендации</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 5 — DEMO: DASHBOARD
+════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="left">
+    <div class="tag">📺 Демо</div>
+    <h2>Главный дашборд</h2>
+    <p>Все ключевые метрики города в режиме реального времени</p>
+    <div class="stat">
+      <div class="val">83</div>
+      <div class="lbl">пожара с начала года</div>
+    </div>
+    <div class="stat">
+      <div class="val">₸2.0 млрд</div>
+      <div class="lbl">ущерб с начала года</div>
+    </div>
+    <div class="stat">
+      <div class="val">₸589 млн</div>
+      <div class="lbl">можно предотвратить</div>
+    </div>
+  </div>
+  <div class="right">
+    <img src="../screenshots/01_dashboard.png" alt="dashboard">
+    <div class="overlay"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 6 — DEMO: INSPECTOR
+════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="left">
+    <img src="../screenshots/03_inspector.png" alt="inspector">
+    <div class="overlay"></div>
+  </div>
+  <div class="right">
+    <div class="pill">⭐ Киллер-фича</div>
+    <h2>Инспектор — приоритизация проверок</h2>
+    <p>AI анализирует 5 факторов риска и выдаёт список: кого проверить в первую очередь.</p>
+    <ul class="steps">
+      <li><span class="num">1</span> Анализ истории инцидентов</li>
+      <li><span class="num">2</span> Оценка типа и возраста здания</li>
+      <li><span class="num">3</span> Сезонность и прогноз</li>
+      <li><span class="num">4</span> Время с последней проверки</li>
+      <li><span class="num">5</span> Risk score → приоритет</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 7 — FORECAST
+════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="top">
+    <div class="top-left">
+      <div class="tag">📈 Прогноз</div>
+      <h2>Мы знаем, где будет следующий пожар</h2>
+      <p>Holt-Winters ETS — алгоритм, который учитывает сезонность и тренды</p>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="val">R²=0.82</div><div class="lbl">точность модели</div></div>
+      <div class="metric"><div class="val">3/6/12</div><div class="lbl">месяцев вперёд</div></div>
+      <div class="metric"><div class="val">834</div><div class="lbl">инцидента в обучении</div></div>
+    </div>
+  </div>
+  <div class="img-wrap">
+    <img src="../screenshots/04_forecast.png" alt="forecast">
+    <div class="overlay-b"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 8 — BUSINESS MODEL
+════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="glow-orb orb1"></div>
+  <div class="slide-header">
+    <div class="tag">💼 Бизнес-модель</div>
+    <h2>B2G SaaS</h2>
+  </div>
+  <div class="bm-grid">
+    <div class="bm-card">
+      <h3>Модель</h3>
+      <div class="big">Годовая лицензия</div>
+      <p>Одна лицензия на ДЧС города. Неограниченное число пользователей внутри ведомства.</p>
+    </div>
+    <div class="bm-card">
+      <h3>Рынок</h3>
+      <div class="big">14 городов</div>
+      <p>Областные центры Казахстана — первичный рынок. Далее — ЦА и другие страны СНГ.</p>
+    </div>
+    <div class="bm-card">
+      <h3>Первый клиент</h3>
+      <div class="big">ДЧС Астаны</div>
+      <p>Полевые интервью проведены. Готовы к пилотному развёртыванию.</p>
+    </div>
+    <div class="bm-card">
+      <h3>Стек готов</h3>
+      <div class="big">Multi-city</div>
+      <p>Архитектура поддерживает любое количество городов — переключение за 1 клик.</p>
+    </div>
+  </div>
+  <div class="stages">
+    <div class="stage"><div class="dot"></div><div class="name">Астана</div><div class="sub">Пилот 2026</div></div>
+    <div class="stage"><div class="dot dim"></div><div class="name dim">Алматы</div><div class="sub">2026</div></div>
+    <div class="stage"><div class="dot dim"></div><div class="name dim">РК</div><div class="sub">14 городов</div></div>
+    <div class="stage"><div class="dot dim"></div><div class="name dim">ЦА</div><div class="sub">2027+</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 9 — TEAM
+════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="glow-orb orb1"></div>
+  <div class="slide-header">
+    <div class="tag">👥 Команда</div>
+    <h2>Кто строит FireWatch</h2>
+  </div>
+  <div class="team">
+    <div class="member">
+      <div class="avatar">N</div>
+      <h3>Nurtilek Assankhan</h3>
+      <div class="role">Основатель · Full-Stack разработчик</div>
+      <ul>
+        <li>Построил MVP с нуля за несколько недель</li>
+        <li>FastAPI, Next.js 15, AI-интеграции</li>
+        <li>Опыт: AI-дашборд для КМГ-Кумкол</li>
+        <li>Деплой на Railway, готов к масштабированию</li>
+      </ul>
+    </div>
+    <div class="member">
+      <div class="avatar">M</div>
+      <h3>Медет Мурзагулов</h3>
+      <div class="role">Co-founder · Питчинг &amp; Бизнес</div>
+      <ul>
+        <li>Опыт питчинга проектов инвесторам</li>
+        <li>Бизнес-девелопмент и партнёрства</li>
+        <li>Выход на ДЧС и городские ведомства</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SLIDE 10 — ASK
+════════════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="glow-orb orb1"></div>
+  <div class="glow-orb orb2"></div>
+  <div class="slide-header">
+    <div class="tag">🚀 Запрос</div>
+    <h2>Что нам <em>нужно</em></h2>
+  </div>
+  <div class="asks">
+    <div class="ask-row">
+      <div class="icon">🤝</div>
+      <div>
+        <h3>Пилот с ДЧС г. Астана</h3>
+        <p>Готовы к развёртыванию — MVP работает. Нужен официальный партнёр для первого реального использования.</p>
+      </div>
+    </div>
+    <div class="ask-row">
+      <div class="icon">🏛️</div>
+      <div>
+        <h3>Выход на акимат через Astana Hub</h3>
+        <p>Помощь в установлении контакта с городскими ведомствами и МЧС Казахстана.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

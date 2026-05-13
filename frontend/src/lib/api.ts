@@ -8,6 +8,11 @@ import type {
   ChatMessage,
   Incident,
   InspectorAlert,
+  Building,
+  Hydrant,
+  HydrantUpdate,
+  RouteEstimate,
+  RoutingStation,
 } from './types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
@@ -21,6 +26,16 @@ async function get<T>(path: string): Promise<T> {
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`)
+  return res.json()
+}
+
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
@@ -71,5 +86,32 @@ export const api = {
   telegram: {
     config: () => get<{ status: string; chat_id?: string | null; bot_token_masked?: string }>('/api/v1/telegram/config'),
     test: (city: string) => post<{ status: string }>(`/api/v1/telegram/test?city=${city}`, {}),
+  },
+
+  buildings: {
+    list: (city: string) => get<Building[]>(`/api/v1/buildings?city=${city}`),
+    get: (id: string) => get<Building>(`/api/v1/buildings/${id}`),
+  },
+
+  hydrants: {
+    list: (city: string, status?: string) => {
+      const params = new URLSearchParams({ city })
+      if (status) params.set('status', status)
+      return get<Hydrant[]>(`/api/v1/hydrants?${params}`)
+    },
+    update: (city: string, id: string, body: HydrantUpdate) =>
+      patch<Hydrant>(`/api/v1/hydrants/${id}?city=${city}`, body),
+  },
+
+  routing: {
+    estimate: (body: {
+      from_lat: number
+      from_lon: number
+      to_lat: number
+      to_lon: number
+      city: string
+      station_id?: string
+    }) => post<RouteEstimate>('/api/v1/routing/estimate', body),
+    stations: (city: string) => get<RoutingStation[]>(`/api/v1/routing/stations?city=${city}`),
   },
 }

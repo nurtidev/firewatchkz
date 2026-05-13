@@ -10,7 +10,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from db.base import Base
-from models.city import City  # noqa: F401
+from models.city import City          # noqa: F401
+from models.building import Building  # noqa: F401
+from models.user import User          # noqa: F401
+from models.audit_log import AuditLog # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

@@ -22,6 +22,7 @@ from routers import (
     kpi,
     operations,
     recommendations,
+    routing,
     stations,
     telegram,
 )
@@ -76,6 +77,7 @@ app.include_router(inspection_plan.router, prefix=API_PREFIX)
 app.include_router(operations.router, prefix=API_PREFIX)
 app.include_router(stations.router, prefix=API_PREFIX)
 app.include_router(hydrants.router, prefix=API_PREFIX)
+app.include_router(routing.router, prefix=API_PREFIX)
 app.include_router(telegram.router, prefix=API_PREFIX)
 
 

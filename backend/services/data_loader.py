@@ -118,6 +118,15 @@ class DataLoader:
         stations = self._load_json_records(city_key, "stations")
         return [station.copy() for station in stations]
 
+    def update_hydrant(self, city: str, hydrant_id: str, updates: dict) -> Optional[dict]:
+        city_key = self._validate_city(city)
+        hydrants = self._load_json_records(city_key, "hydrants")
+        for hydrant in hydrants:
+            if hydrant["id"] == hydrant_id:
+                hydrant.update({k: v for k, v in updates.items() if v is not None or k in ("notes",)})
+                return hydrant.copy()
+        return None
+
     def get_hydrants(self, city: str, status: Optional[str] = None) -> list[dict]:
         city_key = self._validate_city(city)
         hydrants = [hydrant.copy() for hydrant in self._load_json_records(city_key, "hydrants")]
@@ -139,6 +148,16 @@ class DataLoader:
                 dataframe["response_time_min"] = dataframe["response_time_min"].astype(float)
                 _DATAFRAME_CACHE[cache_key] = dataframe.sort_values("date").reset_index(drop=True)
         return _DATAFRAME_CACHE[cache_key].copy()
+
+    def get_building_by_id(self, city: str, building_id: str) -> Optional[dict]:
+        db_building = database_service.get_building_by_id(building_id)
+        if db_building:
+            return db_building
+        buildings = self.get_buildings(city)
+        for building in buildings:
+            if str(building.get("id", "")) == building_id:
+                return building
+        return None
 
     def get_buildings(self, city: str) -> list[dict]:
         city_key = self._validate_city(city)
