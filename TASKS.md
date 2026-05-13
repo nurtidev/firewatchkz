@@ -1205,3 +1205,1091 @@ NEXT_PUBLIC_API_URL=https://your-api.up.railway.app
 | B-13 Operations analytics | B | `[x]` | — |
 | C-1 Astana GeoJSON | C | `[x]` | Everything |
 | D-1 Railway config | D | `[x]` | — |
+| A-16 Buildings GET/{id} endpoint | A | `[x]` | A-1 |
+| A-17 Hydrants PATCH/{id} endpoint + new fields | A | `[x]` | A-12 |
+| A-18 Emergency routing service + router | A | `[x]` | A-11 |
+| B-14 Buildings page + QR modal | B | `[x]` | A-16 |
+| B-15 Public plan viewer /plan/[id] | B | `[x]` | A-16 |
+| B-16 Hydrants page with mobile update form | B | `[x]` | A-17 |
+| B-17 Emergency routing page with map | B | `[x]` | A-18 |
+
+---
+
+# v2.0 — Per-building Risk + Document Ingestion
+
+> См. `ARCHITECTURE_v2.md` для полного контекста.
+> Решения по реализации зафиксированы 2026-05-13:
+> - Hosting: Railway (без TimescaleDB пока)
+> - Storage: Cloudflare R2 (не MinIO)
+> - Buildings source: OSM-first, но через `BuildingsProvider` абстракцию для свапа на 2GIS
+> - v1 API (`/api/v1/*`) работает параллельно с v2 до конца Фазы 2
+> - Реальные оперкарточки недоступны → генерируем синтетику для тестов
+
+**Фазы:**
+- **Фаза 1 (E + F + G)** — DB foundation + Document Ingestion (5 недель)
+- **Фаза 2 (H + I)** — Per-building risk model + UI (5 недель)
+- **Фаза 3 (J)** — Polish, RBAC, observability, v1 cleanup (3-4 недели)
+
+---
+
+## Track E — Database Foundation (Фаза 1)
+
+> Без этого трека ничего из v2 не поедет. E-1 → E-2 → остальные параллельно.
+
+---
+
+### [E-1] Railway Postgres + PostGIS setup
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** nothing
+
+**What to build:**
+Поднять managed PostgreSQL 16 на Railway, активировать PostGIS 3.4, подключить `backend` сервис.
+
+**Steps:**
+- Railway → Add Service → PostgreSQL
+- Connect to backend via `DATABASE_URL` env var (Railway auto-injects)
+- Через Railway Web Shell или psql: `CREATE EXTENSION IF NOT EXISTS postgis;` `CREATE EXTENSION IF NOT EXISTS pgcrypto;` (для `gen_random_uuid`)
+- Локально: `docker-compose.yml` с `postgis/postgis:16-3.4` для dev
+- Обновить `.env.example` и `backend/README.md` с `DATABASE_URL` примером
+
+**Acceptance criteria:**
+- `SELECT PostGIS_Version();` возвращает 3.4.x на проде
+- Локальный docker-compose поднимает Postgres+PostGIS одной командой
+- Backend на Railway видит DATABASE_URL
+
+---
+
+### [E-2] SQLAlchemy + Alembic scaffold
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** E-1
+
+**What to build:**
+Подключить SQLAlchemy 2.x (async) и Alembic в `backend/`.
+
+**Add to `requirements.txt`:**
+```
+sqlalchemy[asyncio]==2.0.30
+alembic==1.13.2
+asyncpg==0.29.0
+geoalchemy2==0.15.2
+```
+
+**File structure:**
+```
+backend/
+├── db/
+│   ├── __init__.py
+│   ├── session.py          # async engine + session factory
+│   └── base.py             # DeclarativeBase
+├── models/
+│   ├── __init__.py
+│   └── (per-table модели появятся в E-3, E-4)
+└── alembic/
+    ├── env.py
+    ├── alembic.ini
+    └── versions/
+```
+
+**Session config:** asyncpg pool, `pool_size=10`, `pool_pre_ping=True`.
+
+**Acceptance criteria:**
+- `alembic upgrade head` работает (пока без миграций)
+- `alembic revision --autogenerate -m "..."` создаёт пустую миграцию
+- Можно сделать `async with get_session() as s:` в FastAPI dependency
+
+---
+
+### [E-3] Migration: core entities
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** E-2
+
+**What to build:**
+Первая Alembic-миграция: `cities`, `buildings`, `users`, `audit_log`.
+
+**Tables (упрощённый набор v1-совместимых полей):**
+
+`cities`:
+- `id UUID PK`, `code TEXT UNIQUE` (e.g. 'astana'), `name TEXT`, `center GEOMETRY(POINT, 4326)`, `zoom INT`
+
+`buildings` (см. ARCHITECTURE_v2.md §4.3, но без `building_features`):
+- Все поля из schema в доке
+- **Важно:** `source TEXT NOT NULL` ('osm'/'2gis'/'manual'/'document_extract'), `external_id TEXT`, UNIQUE(source, external_id)
+- GIST индексы на `geom` и `centroid`
+
+`users`:
+- `id UUID PK`, `email UNIQUE`, `full_name`, `role TEXT` (admin/analyst/inspector/viewer), `password_hash`, `created_at`, `last_login_at`
+- Сидим 4 тестовых юзера в миграции (см. A-13)
+
+`audit_log`:
+- Как в доке, индексы на (entity_type, entity_id) и occurred_at
+
+**Acceptance criteria:**
+- `alembic upgrade head` создаёт все 4 таблицы
+- В `cities` засеян 1 город — Астана (с centroid 51.18, 71.45, zoom 12)
+- Можно сделать `SELECT * FROM buildings;` (пусто, но без ошибки)
+
+---
+
+### [E-4] Migration: incidents, hydrants, stations, operations
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** E-3
+
+**What to build:**
+Вторая миграция: `incidents`, `hydrants`, `fire_stations`, `operations`, `inspections`.
+
+**Tables:** см. ARCHITECTURE_v2.md §4.3 + v1-совместимость:
+- `incidents` — добавить `district TEXT` (для legacy v1 endpoints)
+- `hydrants` — поля из A-17 (status enum: working/maintenance/out_of_service)
+- `fire_stations` — поля из A-11 (units, staff_count)
+- `operations` — все поля из A-15
+
+**Acceptance criteria:**
+- Миграция применяется без ошибок
+- Все GIST индексы созданы (видны в `\di+`)
+- Foreign keys корректны
+
+---
+
+### [E-5] Migration: documents (operational_cards + card_extractions)
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** E-3
+
+**What to build:**
+Третья миграция: `operational_cards`, `card_extractions`.
+
+См. ARCHITECTURE_v2.md §4.3, без изменений.
+
+**Acceptance criteria:**
+- Обе таблицы созданы
+- FK `card_extractions.card_id → operational_cards.id` с `ON DELETE CASCADE`
+- FK `operational_cards.uploaded_by → users.id`
+
+---
+
+### [E-6] CSV → Postgres migration script
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** E-3, E-4
+
+**What to build:**
+`backend/scripts/migrate_csv_to_db.py` — одноразовый перенос всех существующих CSV-данных в БД.
+
+**Migrates:**
+- `astana_incidents.csv` → `incidents` (генерим `district` по lat/lon если нужно)
+- `astana_stations.json` → `fire_stations`
+- `astana_hydrants.json` → `hydrants`
+- `astana_operations.csv` → `operations`
+- Тестовые юзеры из `auth_service.py` → `users`
+
+**Idempotent:** скрипт можно запустить много раз, дубликатов не создаст (по `external_id` или composite key).
+
+**Acceptance criteria:**
+- После запуска: `SELECT COUNT(*) FROM incidents` ≈ 834
+- Все 5 районов Астаны представлены в `incidents.district`
+- Гидранты и станции имеют валидные `geom`
+
+---
+
+### [E-7] data_loader_v2 — SQLAlchemy backend
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** E-6
+
+**What to build:**
+`backend/services/data_loader_v2.py` — замена pandas-based `data_loader.py` для v2 эндпоинтов.
+
+**Interface:** те же методы что в v1 (`get_incidents`, `get_district_stats`, etc.), но возвращают dict'ы а не DataFrame, читают из Postgres.
+
+**v1 НЕ ТРОГАЕМ** — старый `data_loader.py` продолжает работать с CSV для `/api/v1/*`.
+
+**Acceptance criteria:**
+- Все методы async, используют SQLAlchemy
+- Performance: `get_district_stats('astana')` < 100ms
+- Покрыт unit-тестами на in-memory test DB
+
+---
+
+### [E-8] BuildingsProvider abstraction
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** E-3
+
+**What to build:**
+Абстракция для пуллинга зданий из разных источников (OSM сейчас, 2GIS потом).
+
+**File structure:**
+```
+backend/services/providers/
+├── __init__.py
+├── base.py              # abstract BuildingsProvider
+├── osm_provider.py      # Overpass API impl
+└── twogis_provider.py   # NotImplementedError stub
+```
+
+**Interface:**
+```python
+class BuildingsProvider(ABC):
+    @abstractmethod
+    async def fetch_buildings(self, bbox: BBox) -> list[BuildingDTO]: ...
+
+    @abstractmethod
+    def source_name(self) -> Literal['osm', '2gis']: ...
+```
+
+**`BuildingDTO`** — Pydantic модель с полями для upsert в `buildings`. `external_id` обязателен.
+
+**Factory:** `get_provider(name: str) -> BuildingsProvider` читает `BUILDINGS_PROVIDER` env var ('osm' по умолчанию).
+
+**Acceptance criteria:**
+- OSM provider возвращает здания для bbox Астаны через Overpass
+- Можно мокнуть provider в тестах
+- Свап на 2GIS позже — добавить новый класс, поменять env var
+
+---
+
+## Track F — Document Ingestion Backend (Фаза 1)
+
+> F-1, F-2, F-4 параллельны. F-3 → F-5 → F-6 → F-7 → F-8 последовательно.
+
+---
+
+### [F-1] Cloudflare R2 storage integration
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** E-2
+
+**What to build:**
+`backend/services/storage.py` — обёртка над S3-совместимым API R2.
+
+**Use `boto3`** с custom endpoint URL. Кладём в `backend/requirements.txt`: `boto3==1.34.0`.
+
+**Interface:**
+```python
+class StorageService:
+    async def upload(self, key: str, content: bytes, mime: str) -> str  # returns URL
+    async def download(self, key: str) -> bytes
+    async def presigned_get(self, key: str, ttl_seconds: int = 3600) -> str
+    async def delete(self, key: str): ...
+```
+
+**Env vars:**
+```
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET=firewatch-documents
+R2_PUBLIC_URL=https://...
+```
+
+**Key structure:** `documents/{user_id}/{card_uuid}/original.{ext}` + `documents/{user_id}/{card_uuid}/converted.pdf` + `documents/{user_id}/{card_uuid}/thumb.jpg`
+
+**Acceptance criteria:**
+- Upload + download + delete работают на боевом R2
+- Presigned URLs валидны и истекают
+- Локальная альтернатива: `LOCAL_STORAGE_PATH` env var переключает на disk (для разработки без R2)
+
+---
+
+### [F-2] Celery + Redis async workers
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** E-2
+
+**What to build:**
+Celery worker для async-обработки документов.
+
+**Add to requirements:** `celery[redis]==5.4.0`, `redis==5.0.4`
+
+**File structure:**
+```
+backend/
+├── celery_app.py           # Celery instance
+├── workers/
+│   ├── __init__.py
+│   └── documents.py        # task definitions (заполнятся в F-3, F-5)
+```
+
+**Railway:** добавить второй сервис `backend-worker` с командой `celery -A celery_app worker -l info`. Redis — Railway add-on.
+
+**Broker URL** через env `REDIS_URL`.
+
+**Acceptance criteria:**
+- Worker стартует на Railway без ошибок
+- Тестовая задача `celery_app.send_task('ping')` возвращает результат
+- API endpoint может зашедулить задачу и не блокироваться
+
+---
+
+### [F-3] Document upload + normalization
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** E-5, F-1, F-2
+
+**What to build:**
+- `POST /api/v2/documents/upload` (multipart) — приём файла, запись в R2, создание `operational_cards` record со статусом `uploaded`, запуск Celery task
+- Celery task `normalize_document(card_id)`:
+  - DOCX/DOC/VSD → PDF через `libreoffice --headless --convert-to pdf` (LibreOffice ставим в worker Docker image)
+  - JPG/PNG/PDF — без конвертации
+  - Генерация thumbnail (first page → JPG 400px)
+  - Update status → `ready_for_extraction`
+
+**Dockerfile для worker:**
+```
+FROM python:3.11
+RUN apt-get update && apt-get install -y libreoffice
+...
+```
+
+**Acceptance criteria:**
+- Можно загрузить PDF/DOCX/VSD/JPG через curl
+- Файл появляется в R2
+- После ~30 сек статус карточки = `ready_for_extraction`
+- Thumbnail доступен через presigned URL
+
+---
+
+### [F-4] Synthetic operational cards generator
+**Status:** `[x]`
+**Priority:** High
+**Depends on:** nothing (не зависит от БД)
+
+**What to build:**
+`backend/scripts/generate_synthetic_cards.py` — генератор фейковых оперкарточек в стиле формы МЧС РК.
+
+**Output:** 30-50 файлов в `backend/data/sample/synthetic_cards/`:
+- 15 PDF (с реальным текстом, через `reportlab`)
+- 10 scan-like JPG (рендер PDF → noise + skew, через `pdf2image` + `Pillow`)
+- 5 DOCX (через `python-docx`)
+- 5 битых/неполных карточек (для теста edge cases)
+
+**Поля карточки** (берём из Pydantic schema в ARCHITECTURE_v2.md §6.3):
+- Номер карточки, дата утверждения
+- Объект: название, адрес (реальные адреса Астаны), категория Ф1-Ф5
+- Здание: этажи, площадь, материалы, год постройки
+- Системы ПБ: сигнализация, спринклеры, эвакуационные выходы
+- Гидранты рядом, водоисточники
+- Особенности: газовые системы, опасные материалы
+
+**Variation:** случайные значения, иногда специально пропущенные поля, иногда устаревшие даты revision.
+
+**Acceptance criteria:**
+- 30+ файлов сгенерированы
+- PDF/JPG/DOCX все валидны (открываются)
+- Покрывают разные типы зданий (ТРЦ, школа, жилой, склад)
+
+---
+
+### [F-5] Pydantic extraction schema + Claude tool
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** F-3
+
+**What to build:**
+- `backend/services/extraction/schema.py` — Pydantic-модель `OperationalCardExtraction` из ARCHITECTURE_v2.md §6.3
+- `backend/services/extraction/extractor.py` — wrapper Claude Sonnet 4 с tool use
+- Конвертация PDF → image blocks для Claude (vision API; разбиваем на pages, до 100 страниц за раз)
+
+**System prompt:** см. ARCHITECTURE_v2.md §5.4
+
+**Costs tracking:** возврашать tokens used + computed cost USD из API response, писать в `card_extractions.extraction_cost_usd`.
+
+**Acceptance criteria:**
+- Прогон на синтетических карточках из F-4 даёт валидный JSON по schema
+- Confidence score для каждого поля от 0 до 1
+- Cost per card < $0.20
+
+---
+
+### [F-6] Extraction Celery task
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** F-5
+
+**What to build:**
+Celery task `extract_document(card_id)`:
+- Читает PDF из R2
+- Зовёт extractor из F-5
+- Пишет результат в `card_extractions`
+- Обновляет `operational_cards.status` → `extracted`, `extraction_id`
+
+Триггерится автоматически после F-3 (normalization → extraction в chain).
+
+**Acceptance criteria:**
+- Загруженный документ через 60 сек имеет статус `extracted`
+- В `card_extractions` есть JSON с полями и confidences
+- Если Claude API падает — retry с exponential backoff (3 попытки)
+
+---
+
+### [F-7] Vulnerability analysis task
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** F-6
+
+**What to build:**
+Celery task `analyze_vulnerabilities(extraction_id)`:
+- Берёт extracted_data + raw_text
+- Зовёт Claude Sonnet 4 с промптом из ARCHITECTURE_v2.md §6.4
+- Пишет `vulnerabilities[]` в `card_extractions.vulnerabilities`
+- Status → `review` (готово к проверке человеком)
+
+**Acceptance criteria:**
+- На синтетической карточке с заведомо отсутствующим дымоудалением — vulnerability с severity ≥ high
+- Каждая vulnerability имеет `regulation_violated` и `recommended_action`
+
+---
+
+### [F-8] Document approval → buildings upsert
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** F-7, E-8
+
+**What to build:**
+- `POST /api/v2/documents/{id}/approve` — финализация
+- На approve: парсим `extracted_data`, делаем UPSERT в `buildings` (source='document_extract', external_id=card_id), обновляем связанные `hydrants` если упомянуты
+- Триггер пересчёта features (placeholder — реальный pipeline в H-4)
+- Audit log
+
+**Acceptance criteria:**
+- После approve: новое здание в `buildings` с правильными полями
+- Если здание уже было (matched по адресу) — обновляется, source меняется на document_extract если confidence выше
+- Запись в `audit_log`
+
+---
+
+### [F-9] Documents list + status endpoints
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** F-3
+
+**What to build:**
+```
+GET    /api/v2/documents?status=&uploaded_by=&limit=
+GET    /api/v2/documents/{id}
+GET    /api/v2/documents/{id}/status       # для polling из UI
+GET    /api/v2/documents/{id}/extraction
+PATCH  /api/v2/documents/{id}/extraction   # human corrections
+DELETE /api/v2/documents/{id}
+```
+
+**Acceptance criteria:**
+- Все эндпоинты возвращают валидный JSON
+- PATCH сохраняет changes в audit_log
+
+---
+
+## Track G — Document Ingestion Frontend (Фаза 1)
+
+> G-1 → G-2 → G-3 → G-4. G-5, G-6 параллельны с G-4.
+
+---
+
+### [G-1] Documents list page
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** F-9
+
+**What to build:**
+`frontend/src/app/dashboard/documents/page.tsx`
+
+**UI:**
+- Таблица: имя файла, дата загрузки, статус (chip), кто загрузил, building (если matched)
+- Фильтр по статусу (uploaded / extracting / review / approved / rejected)
+- Кнопка "Загрузить документ" → открывает upload modal (G-2)
+- Click на row → переход на `/dashboard/documents/[id]`
+
+**Data:** `GET /api/v2/documents`
+
+**Acceptance criteria:**
+- Таблица рендерится с моковыми данными если API недоступен
+- Polling каждые 5 сек для документов в статусах `extracting`/`converting`
+- Мобильная адаптивность (карточки на 375px, таблица на ≥768px)
+
+---
+
+### [G-2] Upload modal with drag-drop
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** G-1
+
+**What to build:**
+`frontend/src/components/documents/UploadModal.tsx`
+
+**UI:**
+- Dropzone (react-dropzone): "Перетащите карточку сюда или нажмите для выбора"
+- Поддержка multiple files
+- Прогресс-бар per file
+- Подсказка форматов: PDF, DOCX, DOC, VSD, JPG, PNG, ZIP
+- После upload → редирект на /dashboard/documents/[id]
+
+**API:** `POST /api/v2/documents/upload`
+
+**Acceptance criteria:**
+- Drag-drop работает
+- Прогресс обновляется
+- Ошибки upload (413, 415) показываются юзеру по-русски
+
+---
+
+### [G-3] PDF preview component
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** G-1
+
+**What to build:**
+`frontend/src/components/documents/PdfPreview.tsx`
+
+**Stack:** `pdfjs-dist` через `react-pdf` wrapper.
+
+**Features:**
+- Загрузка PDF через presigned URL из API
+- Пагинация (◀ ▶ + jump to page)
+- Zoom in/out
+- Highlight bbox при click на поле extraction (placeholder — реальная подсветка в G-6)
+
+**SSR:** dynamic import с ssr: false (как Leaflet, см. feedback memory).
+
+**Acceptance criteria:**
+- PDF отображается
+- Навигация между страницами работает
+- Для не-PDF (JPG) — fallback на `<img>`
+
+---
+
+### [G-4] Side-by-side review UI
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** G-3, F-7
+
+**What to build:**
+`frontend/src/app/dashboard/documents/[id]/page.tsx`
+
+**UI:** см. mock в ARCHITECTURE_v2.md §6.5:
+- Left panel (50%): PdfPreview из G-3
+- Right panel (50%): scrollable форма с extracted полями
+- Color-coding per field:
+  - 🟢 confidence > 0.9 — read-only highlight
+  - 🟡 0.6-0.9 — editable, фокус автоматически
+  - 🔴 < 0.6 — required to confirm, save disabled
+- Vulnerabilities секция снизу с severity badges
+- Кнопки: "Отклонить" / "Сохранить и далее"
+
+**Mobile:** tabs вместо split (PDF / Поля)
+
+**Data:** `GET /api/v2/documents/{id}/extraction`
+
+**Acceptance criteria:**
+- Все поля редактируемы
+- Save button disabled пока есть red fields без подтверждения
+- Approve → `POST /api/v2/documents/{id}/approve` → редирект на список
+
+---
+
+### [G-5] Vulnerability cards UI
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** G-4
+
+**What to build:**
+Компонент `VulnerabilityCard.tsx` внутри G-4.
+
+**UI per card:**
+- Severity badge (critical=red, high=orange, medium=yellow, low=gray)
+- Description
+- Ссылка на regulation_violated
+- Recommended action как actionable bullet
+
+**Acceptance criteria:**
+- Карточки отсортированы по severity
+- Раскрываются по клику
+
+---
+
+### [G-6] Bbox highlight on field click (stretch)
+**Status:** `[ ]`
+**Priority:** Low
+**Depends on:** G-4, F-5
+
+**What to build:**
+При click на поле в правой панели — подсветить место в PDF где Claude нашёл значение.
+
+**Approach:** просим Claude в F-5 возвращать `bbox` (page, x, y, width, height) для каждого поля. Рендерим overlay поверх PDF canvas.
+
+**Note:** stretch goal — если Claude bbox не очень надёжен, можно отложить в v2.1.
+
+**Acceptance criteria:**
+- Click → подсветка появляется
+- Работает на 80%+ полях (где confidence ≥ 0.7)
+
+---
+
+## Track H — Per-building Risk Backend (Фаза 2)
+
+> H-1 → H-2 → H-3, H-4 параллельны. H-5 → H-6, H-7 параллельны. H-8 → H-9.
+
+---
+
+### [H-1] OSM buildings import
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** E-8
+
+**What to build:**
+`backend/scripts/import_osm_buildings.py` — массовый импорт зданий Астаны через Overpass API.
+
+**Steps:**
+- Bbox Астаны: примерно 51.05..51.30, 71.30..71.60
+- Overpass query: `way["building"](bbox); out geom;`
+- Для каждого OSM way: парсим теги → BuildingDTO (через провайдер из E-8)
+- UPSERT в `buildings` с source='osm', external_id=osm_id
+
+**Idempotent:** повторный запуск обновляет уже существующие.
+
+**Acceptance criteria:**
+- 10K+ зданий импортировано (примерно ожидаем для Астаны)
+- GIST индексы используются (EXPLAIN на bbox query)
+- Скрипт можно запускать через `python -m scripts.import_osm_buildings --city astana`
+
+---
+
+### [H-2] Incident-to-building matching
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** H-1
+
+**What to build:**
+`backend/scripts/match_incidents_to_buildings.py` — заполняет `incidents.building_id`.
+
+**Approach:**
+```sql
+UPDATE incidents i
+SET building_id = (
+    SELECT b.id FROM buildings b
+    WHERE ST_DWithin(b.geom::geography, i.geom::geography, 30)
+    ORDER BY ST_Distance(b.geom, i.geom)
+    LIMIT 1
+)
+WHERE building_id IS NULL;
+```
+
+**Acceptance criteria:**
+- ≥70% инцидентов получили `building_id`
+- Остальные — это inцидент в нежилых местах (улицы, поля) — это ok
+
+---
+
+### [H-3] Weather integration (без TimescaleDB)
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** E-3
+
+**What to build:**
+- Таблица `weather_history` (обычная, не hypertable пока):
+  ```sql
+  CREATE TABLE weather_history (
+      ts TIMESTAMPTZ NOT NULL,
+      h3_cell TEXT NOT NULL,
+      temp_c NUMERIC, wind_ms NUMERIC, humidity_pct NUMERIC, precipitation_mm NUMERIC,
+      PRIMARY KEY (ts, h3_cell)
+  );
+  CREATE INDEX idx_weather_ts ON weather_history(ts DESC);
+  ```
+  Партиционируем по месяцу через PARTITION BY RANGE если объёмы вырастут.
+- Celery beat: hourly task `fetch_weather` для Астаны
+- Использует OpenWeatherMap (env `OPENWEATHERMAP_API_KEY`)
+
+**H3 library:** `h3==4.1.0` (используется и в feature builder)
+
+**Acceptance criteria:**
+- Каждый час появляется запись в `weather_history` для центра Астаны (h3 res 8)
+- За сутки набралось 24 точки
+
+---
+
+### [H-4] FeatureBuilder service
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** H-2
+
+**What to build:**
+- Таблица `building_features` (см. ARCHITECTURE_v2.md §4.3)
+- Celery task `rebuild_features(city_id)` — пересчёт для всех зданий города
+- Запуск daily в 03:00
+
+**Минимальный набор фичей (для MVP, не 50):**
+1. `nearest_hydrant_m` — `ST_DWithin` query
+2. `nearest_station_m`
+3. `incidents_500m_3y` — count
+4. `incidents_on_this_building_3y` — count
+5. `building_density_500m`
+6. `age_years` — `extract(year from now()) - year_built`
+7. `population_estimate` — rough estimate по floors * area
+8. `days_since_last_incident`
+9. `days_since_last_inspection`
+10. `building_type` (one-hot будет в препроцессинге модели)
+
+**Performance:** для 10K зданий должно занимать < 5 минут (batch processing).
+
+**Acceptance criteria:**
+- Запуск таска заполняет `building_features` для всех зданий
+- Idempotent (повторный запуск перезаписывает)
+
+---
+
+### [H-5] XGBoost Poisson baseline training
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** H-4
+
+**What to build:**
+`backend/ml/baseline_trainer.py` — обучение модели baseline.
+
+**Add to requirements:** `xgboost==2.0.3`, `scikit-learn==1.4.0`, `shap==0.45.0`
+
+**Pipeline:**
+- Загрузка `building_features` + target (`incidents_3y / 3` для rate в год)
+- Time-based split: train на зданиях с feature_date < 2025-01, valid >= 2025-01
+- Config из ARCHITECTURE_v2.md §5.1
+- Метрики: Poisson deviance, lift в top-decile
+- Сохранение модели через `joblib.dump` в `backend/ml/models/baseline_{date}.pkl`
+
+**CLI:** `python -m ml.baseline_trainer --city astana --save`
+
+**Acceptance criteria:**
+- Модель обучается на синтетических данных (834 инцидента)
+- Top-decile lift > 1.5 (зданий с predicted high risk действительно горят чаще среднего)
+- Сохранённая модель загружается обратно
+
+---
+
+### [H-6] SHAP explanations + risk endpoint
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** H-5
+
+**What to build:**
+- `backend/services/risk_predictor.py` — обёртка над загруженной моделью + SHAP TreeExplainer
+- Таблица `risk_scores` (без TimescaleDB, обычная)
+- Daily Celery task `compute_risk_scores` — заполняет `risk_scores` для всех зданий
+- Эндпоинты:
+  ```
+  GET /api/v2/buildings?bbox=&min_risk=&limit=
+  GET /api/v2/buildings/{id}
+  GET /api/v2/buildings/{id}/risk?horizon=7|30|90
+  GET /api/v2/buildings/{id}/factors  # SHAP top-5 + Haiku-explanation
+  ```
+
+**Haiku-explanation:** SHAP top-5 → Claude Haiku 4.5 → natural language объяснение на русском (как в v1 recommendations).
+
+**Acceptance criteria:**
+- Endpoint возвращает baseline + final score + top-5 факторов с весами
+- Объяснение читаемое на русском
+- Кешируется на 24ч
+
+---
+
+### [H-7] Dynamic modifier (rules)
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** H-3, H-5
+
+**What to build:**
+`backend/services/dynamic_modifier.py` — реализация правил из ARCHITECTURE_v2.md §5.2.
+
+Входит в `compute_risk_scores` task (H-6) как множитель к baseline.
+
+**Inputs:** building, current_time, latest_weather для h3-cell здания.
+
+**Output:** multiplier [0.3, 3.0] + breakdown по факторам (для UI).
+
+**Acceptance criteria:**
+- На день с tempC=-25 + wind=12 + holiday: multiplier ≈ 2.0+
+- На обычный летний понедельник: ≈ 1.0
+- Breakdown полей доступен через API для UI
+
+---
+
+### [H-8] Inspector v2 endpoint
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** H-6
+
+**What to build:**
+`backend/routers/v2/inspector.py`
+
+**Endpoints:**
+```
+GET /api/v2/inspector?city=&top_n=50&filter=
+GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
+```
+
+**TSP:** используем библиотеку или OR-tools если простой nearest-neighbour не достаточно. Для top-50 — OR-tools решает за <1s.
+
+**Acceptance criteria:**
+- Возвращает top-N зданий по final_score
+- Route endpoint возвращает упорядоченный список + total_distance_km + estimated_time
+
+---
+
+### [H-9] v2 hydrants + stations endpoints
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** E-4
+
+**What to build:**
+`/api/v2/hydrants` и `/api/v2/fire-stations` — те же что v1, но из Postgres + bbox фильтр.
+
+**Acceptance criteria:**
+- Bbox фильтрация работает через GIST индексы
+- Совместимы с frontend контрактом v1 (можно мигрировать страницу постепенно)
+
+---
+
+## Track I — Per-building Risk Frontend (Фаза 2)
+
+---
+
+### [I-1] Buildings heatmap layer on map
+**Status:** `[ ]`
+**Priority:** Critical
+**Depends on:** H-6, B-4
+
+**What to build:**
+Новый слой в `RiskMap.tsx` — здания с цветом по `final_score`.
+
+**Performance:** 10K+ зданий — рендерить через Leaflet vector tiles или canvas renderer (`L.canvas()` режим), а не SVG markers.
+
+**Color scale:** градиент green → yellow → red от 0 до max_risk в видимой области.
+
+**Layer toggle:** добавить "Здания (риск)" в toggle из B-9.
+
+**Acceptance criteria:**
+- 10K зданий рендерятся плавно (60 fps на zoom/pan)
+- Click на здание → переход на drill-down (I-2)
+- Mobile: lazy load только в видимом bbox
+
+---
+
+### [I-2] Building drill-down page
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** H-6, H-7
+
+**What to build:**
+`frontend/src/app/dashboard/buildings/[id]/page.tsx` — расширение существующей страницы из B-14.
+
+**Sections:**
+- Header: адрес, тип, основные параметры
+- Risk score: final / baseline / dynamic с breakdown
+- SHAP top-5 факторов (bar chart + Claude explanation)
+- Recommendations (5 штук от Haiku, как в v1)
+- История инцидентов
+- Связанные операционные карточки (если есть в `operational_cards`)
+
+**Acceptance criteria:**
+- Все секции данных из реальных API
+- Mobile friendly
+- Print-friendly view (для распечатки инспектором)
+
+---
+
+### [I-3] Inspector v2 page
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** H-8
+
+**What to build:**
+Расширение существующей `/dashboard/inspector/page.tsx` (B-Inspector) — переключатель v1 (районы) / v2 (здания).
+
+**v2 mode:**
+- Список top-N зданий с risk score
+- TSP-route на карте
+- Estimated route time
+- Экспорт маршрута в PDF/Telegram для инспектора в поле
+
+**Acceptance criteria:**
+- Switcher работает
+- Маршрут визуализируется на карте
+- Mobile-first для использования в поле
+
+---
+
+## Track J — Polish (Фаза 3)
+
+---
+
+### [J-1] JWT RBAC middleware
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** A-13 (уже есть)
+
+**What to build:**
+Расширение существующего `auth_service.py` под 4 роли с реальным JWT (не mock).
+
+**Add:** `python-jose==3.3.0`, `passlib[bcrypt]==1.7.4`.
+
+**FastAPI dependency:** `require_role('admin', 'analyst')` — декоратор для эндпоинтов.
+
+**Routes coverage:**
+- `admin` — `/api/v2/admin/*`, user management
+- `analyst` — read all, run predictions
+- `inspector` — read assigned + log inspections
+- `viewer` — read-only
+
+**Acceptance criteria:**
+- Все mutation эндпоинты v2 требуют auth
+- 403 при недостаточной роли
+- Frontend hides admin controls для non-admin
+
+---
+
+### [J-2] Audit log middleware
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** J-1
+
+**What to build:**
+FastAPI middleware который логирует все mutations (POST/PATCH/PUT/DELETE) в `audit_log`.
+
+**Captures:** user_id, action (route+method), entity_type, entity_id, changes (diff before/after где возможно), ip_address.
+
+**Endpoint:** `GET /api/v2/admin/audit-log?entity_type=&user_id=&from=&to=` (admin only).
+
+**Acceptance criteria:**
+- Каждый mutation попадает в audit_log
+- Performance overhead < 5ms
+- Логи видны в admin UI
+
+---
+
+### [J-3] pytest test suite
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** все v2 backend tasks
+
+**What to build:**
+`backend/tests/` — coverage ≥60% для:
+- Все v2 routers
+- DataLoader_v2
+- Extractor (mock Claude API)
+- FeatureBuilder
+- Risk predictor
+
+**Stack:** pytest + pytest-asyncio + httpx async client + pytest-postgresql для in-memory test DB.
+
+**CI:** GitHub Actions workflow `pytest.yml` на каждый PR.
+
+**Acceptance criteria:**
+- `pytest backend/tests` зелёный
+- Coverage отчёт ≥60% по core путям
+- CI gate включён на main branch
+
+---
+
+### [J-4] Observability stack (lite)
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** E-1
+
+**What to build:**
+- `/metrics` endpoint через `prometheus-fastapi-instrumentator`
+- Структурированное логирование (JSON) через `structlog`
+- Railway → Grafana Cloud free tier integration (Loki + Prom)
+- Дашборды:
+  - Request rate / latency / error rate per endpoint
+  - Celery task throughput + failure rate
+  - Claude API cost per day
+
+**Acceptance criteria:**
+- Метрики видны в Grafana
+- Алерт на error rate > 5% за 5 мин (Telegram)
+
+---
+
+### [J-5] Backups
+**Status:** `[ ]`
+**Priority:** High
+**Depends on:** E-1
+
+**What to build:**
+- Daily `pg_dump` через Railway cron job → R2 bucket (`backups/postgres/{date}.dump`)
+- Retention 30 дней (R2 lifecycle rule)
+- R2 bucket уже имеет versioning для документов
+- Runbook: `docs/RECOVERY.md` с шагами восстановления
+
+**Acceptance criteria:**
+- За неделю в R2 7 свежих бэкапов
+- Тест восстановления на staging (или локально) — проходит
+
+---
+
+### [J-6] v1 → v2 cutover
+**Status:** `[ ]`
+**Priority:** Medium
+**Depends on:** I-1, I-2, I-3, J-1
+
+**What to build:**
+Финальный PR — удаление v1:
+- Удалить `backend/routers/` v1 файлы
+- Удалить старый `data_loader.py`
+- Удалить CSV-загрузку из `main.py`
+- Frontend: удалить старые страницы которые мигрировали в v2
+- Обновить `CONTEXT.md` и `CLAUDE.md` (CSV → Postgres, новые соглашения)
+
+**Acceptance criteria:**
+- Нет упоминаний `/api/v1/` в frontend
+- `grep -r "pandas" backend/` пусто (или только в ML)
+- Smoke test всех страниц проходит
+
+---
+
+## v2 Status Summary
+
+| Task | Track | Status | Phase | Depends on |
+|---|---|---|---|---|
+| E-1 Postgres+PostGIS Railway | E | `[ ]` | 1 | — |
+| E-2 SQLAlchemy + Alembic | E | `[ ]` | 1 | E-1 |
+| E-3 Migration: core entities | E | `[ ]` | 1 | E-2 |
+| E-4 Migration: incidents+hydrants | E | `[ ]` | 1 | E-3 |
+| E-5 Migration: documents | E | `[ ]` | 1 | E-3 |
+| E-6 CSV → Postgres script | E | `[ ]` | 1 | E-4 |
+| E-7 data_loader_v2 | E | `[ ]` | 1 | E-6 |
+| E-8 BuildingsProvider abstraction | E | `[ ]` | 1 | E-3 |
+| F-1 R2 storage | F | `[ ]` | 1 | E-2 |
+| F-2 Celery+Redis | F | `[ ]` | 1 | E-2 |
+| F-3 Upload + normalization | F | `[ ]` | 1 | E-5, F-1, F-2 |
+| F-4 Synthetic cards generator | F | `[x]` | 1 | — |
+| F-5 Pydantic + Claude tool | F | `[ ]` | 1 | F-3 |
+| F-6 Extraction task | F | `[ ]` | 1 | F-5 |
+| F-7 Vulnerability analysis | F | `[ ]` | 1 | F-6 |
+| F-8 Approval → buildings upsert | F | `[ ]` | 1 | F-7, E-8 |
+| F-9 Documents endpoints | F | `[ ]` | 1 | F-3 |
+| G-1 Documents list page | G | `[ ]` | 1 | F-9 |
+| G-2 Upload modal | G | `[ ]` | 1 | G-1 |
+| G-3 PDF preview | G | `[ ]` | 1 | G-1 |
+| G-4 Side-by-side review | G | `[ ]` | 1 | G-3, F-7 |
+| G-5 Vulnerability cards | G | `[ ]` | 1 | G-4 |
+| G-6 Bbox highlight (stretch) | G | `[ ]` | 1 | G-4, F-5 |
+| H-1 OSM buildings import | H | `[ ]` | 2 | E-8 |
+| H-2 Incident matching | H | `[ ]` | 2 | H-1 |
+| H-3 Weather integration | H | `[ ]` | 2 | E-3 |
+| H-4 FeatureBuilder | H | `[ ]` | 2 | H-2 |
+| H-5 XGBoost training | H | `[ ]` | 2 | H-4 |
+| H-6 SHAP + risk endpoint | H | `[ ]` | 2 | H-5 |
+| H-7 Dynamic modifier | H | `[ ]` | 2 | H-3, H-5 |
+| H-8 Inspector v2 backend | H | `[ ]` | 2 | H-6 |
+| H-9 v2 hydrants+stations | H | `[ ]` | 2 | E-4 |
+| I-1 Buildings heatmap layer | I | `[ ]` | 2 | H-6, B-4 |
+| I-2 Building drill-down | I | `[ ]` | 2 | H-6, H-7 |
+| I-3 Inspector v2 frontend | I | `[ ]` | 2 | H-8 |
+| J-1 JWT RBAC | J | `[ ]` | 3 | A-13 |
+| J-2 Audit log middleware | J | `[ ]` | 3 | J-1 |
+| J-3 pytest suite | J | `[ ]` | 3 | all backend |
+| J-4 Observability | J | `[ ]` | 3 | E-1 |
+| J-5 Backups | J | `[ ]` | 3 | E-1 |
+| J-6 v1 cutover | J | `[ ]` | 3 | I-1, I-2, I-3, J-1 |
