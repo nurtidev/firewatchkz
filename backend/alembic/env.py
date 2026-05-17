@@ -49,6 +49,10 @@ def do_run_migrations(connection):
 
 async def run_async_migrations() -> None:
     url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    # Railway отдаёт DATABASE_URL как postgresql:// — нормализуем в asyncpg,
+    # иначе create_async_engine падает на отсутствии psycopg2.
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     connectable = create_async_engine(url)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
