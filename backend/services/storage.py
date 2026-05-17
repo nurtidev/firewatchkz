@@ -137,7 +137,7 @@ class LocalStorageBackend(StorageBackend):
         return f"file://{target.resolve()}"
 
     async def delete(self, key: str) -> None:
-        self._resolve(key).unlink()
+        self._resolve(key).unlink(missing_ok=True)
 
     async def exists(self, key: str) -> bool:
         return self._resolve(key).exists()

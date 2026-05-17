@@ -21,11 +21,13 @@ FireWatch is a multi-city B2G SaaS platform that gives fire departments AI-power
 
 ## Stack (do not change without discussion)
 
-- **Backend:** Python 3.11, FastAPI, Pandas, statsmodels, Anthropic SDK
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy 2.x async (asyncpg), Alembic, Anthropic SDK
 - **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS, Recharts, react-leaflet
 - **AI model:** `claude-haiku-4-5` (cost-efficient; upgrade to Sonnet only for chat if needed)
+- **Database:** PostgreSQL 16 + PostGIS on Railway
+- **Workers:** Celery + Redis for async tasks (document processing, risk scoring, backups)
+- **Storage:** Cloudflare R2 for documents
 - **Deploy:** Railway — two services: `backend/` and `frontend/`
-- **No database for MVP** — CSV → Pandas DataFrames loaded at startup
 
 ---
 
@@ -33,10 +35,10 @@ FireWatch is a multi-city B2G SaaS platform that gives fire departments AI-power
 
 - **Language in code:** English (variable names, comments, file names)
 - **Language in UI strings:** Russian (user-facing labels, messages, placeholders)
-- **API prefix:** `/api/v1/`
+- **API prefix:** `/api/v2/` — v1 has been removed
 - **City is always a query param:** `?city=astana` — never in path
 - **No extra features** — implement exactly what TASKS.md describes, nothing more
-- **No ORM, no database** — raw Pandas for MVP
+- **Python 3.9 compat:** use `Optional[str]`, `List[str]`, `Dict[str, Any]` from `typing` (not `str | None`)
 
 ---
 
@@ -46,9 +48,13 @@ FireWatch is a multi-city B2G SaaS platform that gives fire departments AI-power
 |---|---|
 | `CONTEXT.md` | Full project context — read this to understand the why |
 | `TASKS.md` | Task board — update status when completing tasks |
-| `backend/services/data_loader.py` | Central data access layer |
+| `backend/services/data_loader_v2.py` | Central async data access layer (Postgres) |
 | `backend/services/claude_client.py` | All Claude API calls go through here |
-| `data/sample/astana_incidents.csv` | Generated demo data (committed) |
+| `backend/routers/v2/` | All active API routers |
+| `backend/alembic/versions/` | Database migrations (0001–0008) |
+| `backend/workers/` | Celery tasks: documents, features, risk, weather, backup |
+| `backend/ml/` | XGBoost baseline model + SHAP explanations |
+| `backend/docs/` | OBSERVABILITY.md, RECOVERY.md runbooks |
 
 ---
 
@@ -56,7 +62,6 @@ FireWatch is a multi-city B2G SaaS platform that gives fire departments AI-power
 
 - When completing a task, mark it `[x]` in `TASKS.md`
 - Do not start a task that has unmet dependencies (listed in each task)
-- Tasks A-1, A-2, B-1, C-1 can all start in parallel — no dependencies
 
 ---
 
@@ -65,8 +70,16 @@ FireWatch is a multi-city B2G SaaS platform that gives fire departments AI-power
 Backend `.env`:
 ```
 ANTHROPIC_API_KEY=
-TELEGRAM_BOT_TOKEN=     # optional, app must start without it
+DATABASE_URL=postgresql+asyncpg://...   # Railway injects this
+REDIS_URL=redis://...                   # Railway Redis add-on
+TELEGRAM_BOT_TOKEN=                     # optional
 TELEGRAM_CHAT_ID=
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET=firewatch-documents
+R2_PUBLIC_URL=
+OPENWEATHERMAP_API_KEY=                 # optional
 DEFAULT_CITY=astana
 PORT=8000
 ```
@@ -81,19 +94,25 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Running Locally
 
 ```bash
-# Backend
+# Backend (requires Docker for Postgres)
+docker-compose up -d  # starts Postgres+PostGIS
 cd backend && uvicorn main:app --reload
 
 # Frontend
 cd frontend && npm run dev
+
+# Tests
+cd backend && python3 -m pytest tests/
 ```
 
 ---
 
 ## What NOT to Do
 
-- Do not rename the city "Astana" to anything else in data/tests — it's the test city
-- Do not add a database until MVP is shipped
-- Do not change the tech stack
-- Do not add features not listed in TASKS.md without asking the user
-- Do not commit `.env` files or CSV files outside `data/sample/`
+- Do not use `/api/v1/` prefix — it has been removed
+- Do not use pandas DataFrames in routers — use `data_loader_v2.py` (returns plain dicts)
+- Do not use `data_loader.py` — it has been deleted (v1 legacy)
+- Do not rename the city "Astana" in data/tests — it's the test city
+- Do not change the tech stack without discussion
+- Do not add features not listed in TASKS.md without asking
+- Do not commit `.env` files

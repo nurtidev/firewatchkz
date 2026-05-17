@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Numeric, Text, TIMESTAMP, ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, Column, String, Integer, Numeric, Text, TIMESTAMP, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 from db.base import Base
@@ -26,4 +26,9 @@ class Building(Base):
     fire_hazard_class = Column(String, nullable=True)
     source = Column(String, nullable=False)
     external_id = Column(String, nullable=True)
+    # Frontend-facing rich-shape поля (миграция 0009)
+    name = Column(Text, nullable=True)
+    district = Column(Text, nullable=True)
+    object_type = Column(Text, nullable=True)
+    details = Column(JSON, nullable=False, server_default="{}")
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)

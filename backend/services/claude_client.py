@@ -10,8 +10,12 @@ try:
 except ImportError:  # pragma: no cover - dependency may be absent in local sandbox
     anthropic = None
 
+from services.logger import log
 
 MODEL_NAME = "claude-haiku-4-5"
+# Haiku 4.5 pricing: $0.80/1M input tokens, $4.00/1M output tokens
+_INPUT_COST_PER_TOKEN = 0.80 / 1_000_000
+_OUTPUT_COST_PER_TOKEN = 4.00 / 1_000_000
 _RECOMMENDATION_CACHE: dict[str, dict] = {}
 _CACHE_TTL = timedelta(hours=1)
 _TERM_REPLACEMENTS = {
@@ -82,6 +86,7 @@ class ClaudeClient:
                 system=system_prompt,
                 messages=[{"role": "user", "content": "Сформируй рекомендации сейчас."}],
             )
+            self._log_usage(response)
             text = self._response_text(response)
             payload = self._localize_payload(self._parse_recommendations(text))
         except Exception:
@@ -111,9 +116,28 @@ class ClaudeClient:
                 system=system_prompt,
                 messages=messages,
             )
+            self._log_usage(response)
             return self._response_text(response).strip()
         except Exception:
             return self._mock_reply(message, city_name)
+
+    def _log_usage(self, response: object) -> None:
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return
+        input_tokens = getattr(usage, "input_tokens", 0) or 0
+        output_tokens = getattr(usage, "output_tokens", 0) or 0
+        cost_usd = round(
+            input_tokens * _INPUT_COST_PER_TOKEN + output_tokens * _OUTPUT_COST_PER_TOKEN,
+            6,
+        )
+        log.info(
+            "claude_api_call",
+            model=MODEL_NAME,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost_usd,
+        )
 
     def _refresh_client(self) -> None:
         api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()

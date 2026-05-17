@@ -1372,7 +1372,7 @@ backend/
 ---
 
 ### [E-6] CSV → Postgres migration script
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** E-3, E-4
 
@@ -1396,7 +1396,7 @@ backend/
 ---
 
 ### [E-7] data_loader_v2 — SQLAlchemy backend
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** E-6
 
@@ -1415,7 +1415,7 @@ backend/
 ---
 
 ### [E-8] BuildingsProvider abstraction
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** E-3
 
@@ -1526,7 +1526,7 @@ backend/
 ---
 
 ### [F-3] Document upload + normalization
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** E-5, F-1, F-2
 
@@ -1585,7 +1585,7 @@ RUN apt-get update && apt-get install -y libreoffice
 ---
 
 ### [F-5] Pydantic extraction schema + Claude tool
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** F-3
 
@@ -1606,7 +1606,7 @@ RUN apt-get update && apt-get install -y libreoffice
 ---
 
 ### [F-6] Extraction Celery task
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** F-5
 
@@ -1627,7 +1627,7 @@ Celery task `extract_document(card_id)`:
 ---
 
 ### [F-7] Vulnerability analysis task
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** F-6
 
@@ -1645,7 +1645,7 @@ Celery task `analyze_vulnerabilities(extraction_id)`:
 ---
 
 ### [F-8] Document approval → buildings upsert
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** F-7, E-8
 
@@ -1663,7 +1663,7 @@ Celery task `analyze_vulnerabilities(extraction_id)`:
 ---
 
 ### [F-9] Documents list + status endpoints
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** F-3
 
@@ -1690,7 +1690,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [G-1] Documents list page
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** F-9
 
@@ -1713,7 +1713,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [G-2] Upload modal with drag-drop
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** G-1
 
@@ -1737,7 +1737,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [G-3] PDF preview component
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** G-1
 
@@ -1762,7 +1762,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [G-4] Side-by-side review UI
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** G-3, F-7
 
@@ -1791,7 +1791,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [G-5] Vulnerability cards UI
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** G-4
 
@@ -1835,7 +1835,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [H-1] OSM buildings import
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** E-8
 
@@ -1858,7 +1858,7 @@ DELETE /api/v2/documents/{id}
 ---
 
 ### [H-2] Incident-to-building matching
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** H-1
 
@@ -1884,7 +1884,7 @@ WHERE building_id IS NULL;
 ---
 
 ### [H-3] Weather integration (без TimescaleDB)
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** E-3
 
@@ -1912,7 +1912,7 @@ WHERE building_id IS NULL;
 ---
 
 ### [H-4] FeatureBuilder service
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** H-2
 
@@ -1942,7 +1942,7 @@ WHERE building_id IS NULL;
 ---
 
 ### [H-5] XGBoost Poisson baseline training
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** H-4
 
@@ -1968,7 +1968,7 @@ WHERE building_id IS NULL;
 ---
 
 ### [H-6] SHAP explanations + risk endpoint
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** H-5
 
@@ -1994,7 +1994,7 @@ WHERE building_id IS NULL;
 ---
 
 ### [H-7] Dynamic modifier (rules)
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** H-3, H-5
 
@@ -2015,7 +2015,7 @@ WHERE building_id IS NULL;
 ---
 
 ### [H-8] Inspector v2 endpoint
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** H-6
 
@@ -2037,7 +2037,7 @@ GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
 ---
 
 ### [H-9] v2 hydrants + stations endpoints
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** E-4
 
@@ -2055,7 +2055,7 @@ GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
 ---
 
 ### [I-1] Buildings heatmap layer on map
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Critical
 **Depends on:** H-6, B-4
 
@@ -2076,7 +2076,7 @@ GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
 ---
 
 ### [I-2] Building drill-down page
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** H-6, H-7
 
@@ -2099,7 +2099,7 @@ GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
 ---
 
 ### [I-3] Inspector v2 page
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** H-8
 
@@ -2124,7 +2124,7 @@ GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
 ---
 
 ### [J-1] JWT RBAC middleware
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** A-13 (уже есть)
 
@@ -2149,7 +2149,7 @@ GET /api/v2/inspector/route?building_ids=[...]   # TSP-optimized
 ---
 
 ### [J-2] Audit log middleware
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** J-1
 
@@ -2168,7 +2168,7 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 ---
 
 ### [J-3] pytest test suite
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** все v2 backend tasks
 
@@ -2192,7 +2192,7 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 ---
 
 ### [J-4] Observability stack (lite)
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** E-1
 
@@ -2212,7 +2212,7 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 ---
 
 ### [J-5] Backups
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** High
 **Depends on:** E-1
 
@@ -2229,7 +2229,7 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 ---
 
 ### [J-6] v1 → v2 cutover
-**Status:** `[ ]`
+**Status:** `[x]`
 **Priority:** Medium
 **Depends on:** I-1, I-2, I-3, J-1
 
@@ -2257,39 +2257,39 @@ FastAPI middleware который логирует все mutations (POST/PATCH/
 | E-3 Migration: core entities | E | `[x]` | 1 | E-2 |
 | E-4 Migration: incidents+hydrants | E | `[x]` | 1 | E-3 |
 | E-5 Migration: documents | E | `[x]` | 1 | E-3 |
-| E-6 CSV → Postgres script | E | `[ ]` | 1 | E-4 |
-| E-7 data_loader_v2 | E | `[ ]` | 1 | E-6 |
-| E-8 BuildingsProvider abstraction | E | `[ ]` | 1 | E-3 |
+| E-6 CSV → Postgres script | E | `[x]` | 1 | E-4 |
+| E-7 data_loader_v2 | E | `[x]` | 1 | E-6 |
+| E-8 BuildingsProvider abstraction | E | `[x]` | 1 | E-3 |
 | F-1 R2 storage | F | `[x]` | 1 | E-2 |
 | F-2 Celery+Redis | F | `[x]` | 1 | E-2 |
-| F-3 Upload + normalization | F | `[ ]` | 1 | E-5, F-1, F-2 |
+| F-3 Upload + normalization | F | `[x]` | 1 | E-5, F-1, F-2 |
 | F-4 Synthetic cards generator | F | `[x]` | 1 | — |
-| F-5 Pydantic + Claude tool | F | `[ ]` | 1 | F-3 |
-| F-6 Extraction task | F | `[ ]` | 1 | F-5 |
-| F-7 Vulnerability analysis | F | `[ ]` | 1 | F-6 |
-| F-8 Approval → buildings upsert | F | `[ ]` | 1 | F-7, E-8 |
-| F-9 Documents endpoints | F | `[ ]` | 1 | F-3 |
-| G-1 Documents list page | G | `[ ]` | 1 | F-9 |
-| G-2 Upload modal | G | `[ ]` | 1 | G-1 |
-| G-3 PDF preview | G | `[ ]` | 1 | G-1 |
-| G-4 Side-by-side review | G | `[ ]` | 1 | G-3, F-7 |
-| G-5 Vulnerability cards | G | `[ ]` | 1 | G-4 |
+| F-5 Pydantic + Claude tool | F | `[x]` | 1 | F-3 |
+| F-6 Extraction task | F | `[x]` | 1 | F-5 |
+| F-7 Vulnerability analysis | F | `[x]` | 1 | F-6 |
+| F-8 Approval → buildings upsert | F | `[x]` | 1 | F-7, E-8 |
+| F-9 Documents endpoints | F | `[x]` | 1 | F-3 |
+| G-1 Documents list page | G | `[x]` | 1 | F-9 |
+| G-2 Upload modal | G | `[x]` | 1 | G-1 |
+| G-3 PDF preview | G | `[x]` | 1 | G-1 |
+| G-4 Side-by-side review | G | `[x]` | 1 | G-3, F-7 |
+| G-5 Vulnerability cards | G | `[x]` | 1 | G-4 |
 | G-6 Bbox highlight (stretch) | G | `[ ]` | 1 | G-4, F-5 |
-| H-1 OSM buildings import | H | `[ ]` | 2 | E-8 |
-| H-2 Incident matching | H | `[ ]` | 2 | H-1 |
-| H-3 Weather integration | H | `[ ]` | 2 | E-3 |
-| H-4 FeatureBuilder | H | `[ ]` | 2 | H-2 |
-| H-5 XGBoost training | H | `[ ]` | 2 | H-4 |
-| H-6 SHAP + risk endpoint | H | `[ ]` | 2 | H-5 |
-| H-7 Dynamic modifier | H | `[ ]` | 2 | H-3, H-5 |
-| H-8 Inspector v2 backend | H | `[ ]` | 2 | H-6 |
-| H-9 v2 hydrants+stations | H | `[ ]` | 2 | E-4 |
-| I-1 Buildings heatmap layer | I | `[ ]` | 2 | H-6, B-4 |
-| I-2 Building drill-down | I | `[ ]` | 2 | H-6, H-7 |
-| I-3 Inspector v2 frontend | I | `[ ]` | 2 | H-8 |
-| J-1 JWT RBAC | J | `[ ]` | 3 | A-13 |
-| J-2 Audit log middleware | J | `[ ]` | 3 | J-1 |
-| J-3 pytest suite | J | `[ ]` | 3 | all backend |
-| J-4 Observability | J | `[ ]` | 3 | E-1 |
-| J-5 Backups | J | `[ ]` | 3 | E-1 |
-| J-6 v1 cutover | J | `[ ]` | 3 | I-1, I-2, I-3, J-1 |
+| H-1 OSM buildings import | H | `[x]` | 2 | E-8 |
+| H-2 Incident matching | H | `[x]` | 2 | H-1 |
+| H-3 Weather integration | H | `[x]` | 2 | E-3 |
+| H-4 FeatureBuilder | H | `[x]` | 2 | H-2 |
+| H-5 XGBoost training | H | `[x]` | 2 | H-4 |
+| H-6 SHAP + risk endpoint | H | `[x]` | 2 | H-5 |
+| H-7 Dynamic modifier | H | `[x]` | 2 | H-3, H-5 |
+| H-8 Inspector v2 backend | H | `[x]` | 2 | H-6 |
+| H-9 v2 hydrants+stations | H | `[x]` | 2 | E-4 |
+| I-1 Buildings heatmap layer | I | `[x]` | 2 | H-6, B-4 |
+| I-2 Building drill-down | I | `[x]` | 2 | H-6, H-7 |
+| I-3 Inspector v2 frontend | I | `[x]` | 2 | H-8 |
+| J-1 JWT RBAC | J | `[x]` | 3 | A-13 |
+| J-2 Audit log middleware | J | `[x]` | 3 | J-1 |
+| J-3 pytest suite | J | `[x]` | 3 | all backend |
+| J-4 Observability | J | `[x]` | 3 | E-1 |
+| J-5 Backups | J | `[x]` | 3 | E-1 |
+| J-6 v1 cutover | J | `[x]` | 3 | I-1, I-2, I-3, J-1 |

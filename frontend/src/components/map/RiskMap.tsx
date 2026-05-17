@@ -1,15 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip } from 'react-leaflet'
+import { useCallback, useEffect, useState } from 'react'
+import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
+import { useRouter } from 'next/navigation'
 import { useCity } from '@/context/CityContext'
 import { api } from '@/lib/api'
-import type { DistrictRisk } from '@/lib/types'
+import type { BuildingRiskItem, DistrictRisk } from '@/lib/types'
 import 'leaflet/dist/leaflet.css'
 
 function riskColor(score: number): string {
   if (score >= 67) return '#ef4444'
   if (score >= 34) return '#eab308'
+  return '#22c55e'
+}
+
+function buildingRiskColor(score: number): string {
+  if (score > 1.5) return '#ef4444'
+  if (score > 0.5) return '#eab308'
   return '#22c55e'
 }
 
@@ -42,7 +49,7 @@ type Hydrant = {
   status: 'working' | 'maintenance' | 'out_of_service'
 }
 
-type LayerKey = 'districts' | 'stations' | 'hydrants'
+type LayerKey = 'districts' | 'stations' | 'hydrants' | 'buildings'
 
 const HYDRANT_STATUS_COLORS: Record<Hydrant['status'], string> = {
   working: '#3b82f6',
@@ -58,6 +65,98 @@ async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return response.json() as Promise<T>
 }
 
+// BuildingsLayer must live inside MapContainer so it can use react-leaflet hooks
+function BuildingsLayer({ city, enabled }: { city: string; enabled: boolean }) {
+  const [buildings, setBuildings] = useState<BuildingRiskItem[]>([])
+  const map = useMap()
+  const router = useRouter()
+
+  const fetchBuildings = useCallback(
+    (signal: AbortSignal) => {
+      if (!enabled) {
+        setBuildings([])
+        return
+      }
+      const bounds = map.getBounds()
+      const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+      fetch(
+        `${BASE_URL}/api/v2/buildings?city=${city}&bbox=${bbox}&limit=500`,
+        { signal }
+      )
+        .then((res) => {
+          if (res.status === 401 || res.status === 403) return []
+          if (!res.ok) throw new Error(`Buildings API error ${res.status}`)
+          return res.json() as Promise<BuildingRiskItem[]>
+        })
+        .then((data) => {
+          if (!signal.aborted) setBuildings(data)
+        })
+        .catch(() => {
+          if (!signal.aborted) setBuildings([])
+        })
+    },
+    [enabled, city, map]
+  )
+
+  // Initial fetch when enabled or city changes
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchBuildings(controller.signal)
+    return () => {
+      controller.abort()
+    }
+  }, [fetchBuildings])
+
+  // Refetch on map move
+  useMapEvents({
+    moveend: () => {
+      const controller = new AbortController()
+      fetchBuildings(controller.signal)
+      // Note: we can't easily clean up this one-shot event handler's controller,
+      // but the component unmount / next fetch will naturally supersede it.
+    },
+  })
+
+  return (
+    <>
+      {buildings.map((building) => {
+        if (building.lat == null || building.lon == null) return null
+        return (
+          <CircleMarker
+            key={building.building_id}
+            center={[building.lat, building.lon]}
+            radius={4}
+            pathOptions={{
+              color: 'transparent',
+              weight: 0,
+              fillColor: buildingRiskColor(building.final_score),
+              fillOpacity: 0.7,
+            }}
+            eventHandlers={{
+              click: () => {
+                router.push(`/dashboard/buildings/${building.building_id}`)
+              },
+            }}
+          >
+            <Popup>
+              <div className="space-y-1 text-sm">
+                <div className="font-semibold text-gray-900">{building.address || 'Адрес не указан'}</div>
+                <div className="text-gray-700">
+                  Риск: <b>{building.final_score.toFixed(2)}</b>
+                </div>
+                {building.building_type && (
+                  <div className="text-gray-700">Тип: {building.building_type}</div>
+                )}
+              </div>
+            </Popup>
+          </CircleMarker>
+        )
+      })}
+    </>
+  )
+}
+
 export function RiskMap() {
   const { city } = useCity()
   const [districtData, setDistrictData] = useState<DistrictRisk[]>([])
@@ -67,6 +166,7 @@ export function RiskMap() {
     districts: true,
     stations: true,
     hydrants: false,
+    buildings: false,
   })
 
   useEffect(() => {
@@ -91,8 +191,8 @@ export function RiskMap() {
     const loadMapLayers = async () => {
       try {
         const [stationData, hydrantData] = await Promise.all([
-          fetchJson<Station[]>(`/api/v1/stations?city=${city.id}`, controller.signal),
-          fetchJson<Hydrant[]>(`/api/v1/hydrants?city=${city.id}`, controller.signal),
+          fetchJson<Station[]>(`/api/v2/stations?city=${city.id}`, controller.signal),
+          fetchJson<Hydrant[]>(`/api/v2/hydrants?city=${city.id}`, controller.signal),
         ])
         setStations(stationData)
         setHydrants(hydrantData)
@@ -196,6 +296,7 @@ export function RiskMap() {
               </Popup>
             </CircleMarker>
           ))}
+          <BuildingsLayer city={city.id} enabled={layers.buildings} />
         </MapContainer>
 
       <div className="absolute top-4 left-4 z-[1000] flex flex-wrap gap-2">
@@ -203,6 +304,7 @@ export function RiskMap() {
           ['districts', 'Районы'],
           ['stations', 'Пожарные части'],
           ['hydrants', 'Гидранты'],
+          ['buildings', 'Здания (риск)'],
         ] as const).map(([key, label]) => (
           <button
             key={key}

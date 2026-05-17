@@ -80,7 +80,7 @@ export default function LoginPage() {
                   Сессия в браузере
                 </div>
                 <p className="text-sm leading-6 text-white/65">
-                  Токен хранится в `localStorage` и восстанавливается через `GET /api/v1/auth/me`.
+                  Токен хранится в `localStorage` и восстанавливается через `GET /api/v2/auth/me`.
                 </p>
               </div>
             </div>

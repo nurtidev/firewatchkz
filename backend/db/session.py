@@ -7,6 +7,9 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+asyncpg://firewatch:firewatch_dev@localhost:5432/firewatch"
 )
+# Railway provides plain postgresql:// — normalize to asyncpg driver
+if DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 engine = create_async_engine(
     DATABASE_URL,

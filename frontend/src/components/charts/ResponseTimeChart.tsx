@@ -106,8 +106,8 @@ export function ResponseTimeChart({ cityId }: Props) {
 
       try {
         const [operations, operationsKpi] = await Promise.all([
-          fetchJson<OperationsResponse>(`/api/v1/operations?city=${resolvedCityId}`),
-          fetchJson<OperationsKpiResponse>(`/api/v1/operations/kpi?city=${resolvedCityId}`),
+          fetchJson<OperationsResponse>(`/api/v2/operations?city=${resolvedCityId}`),
+          fetchJson<OperationsKpiResponse>(`/api/v2/operations/kpi?city=${resolvedCityId}`),
         ])
 
         if (cancelled) return

@@ -26,8 +26,16 @@ def test_task_routing():
 
 def test_normalize_document_task_signature():
     from workers.documents import normalize_document
-    # Task should be callable and return placeholder
-    # Use .apply() to run synchronously in tests (without broker)
-    result = normalize_document.apply(args=["test-card-id"])
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_cursor.__exit__ = MagicMock(return_value=False)
+    mock_cursor.fetchone.return_value = None  # card not found → early return
+    mock_conn.cursor.return_value = mock_cursor
+
+    with patch("workers.documents._sync_db_conn", return_value=mock_conn):
+        result = normalize_document.apply(args=["test-card-id"])
+
     assert result.result["card_id"] == "test-card-id"
     assert "status" in result.result

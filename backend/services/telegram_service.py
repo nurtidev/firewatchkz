@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Dict, List
 
 try:
     from telegram import Bot
 except ImportError:  # pragma: no cover - dependency may be absent in local sandbox
     Bot = None
 
-from services.data_loader import CITY_CONFIG, data_loader
+_CITY_NAMES: Dict[str, str] = {"astana": "Астана", "almaty": "Алматы"}
 
 
 class TelegramService:
@@ -21,30 +21,30 @@ class TelegramService:
         self._refresh_config()
         return bool(self.bot_token and self.chat_id and Bot)
 
-    async def send_test_alert(self, city: str) -> dict[str, Any]:
+    async def send_test_alert(self, city: str, district_rows: List[Dict[str, Any]] = None) -> dict[str, Any]:
         self._refresh_config()
         if not self.is_configured():
             return {"status": "not configured"}
 
-        city_config = CITY_CONFIG.get(city.lower())
-        district_stats = data_loader.get_district_stats(city)
-        top3 = district_stats.sort_values("risk_score", ascending=False).head(3)
-        highest_risk = top3.iloc[0]
+        city_name = _CITY_NAMES.get(city.lower(), city)
+        rows = sorted(district_rows or [], key=lambda r: r.get("risk_score", 0), reverse=True)[:3]
 
-        lines = [f"🔥 <b>FireWatch — {city_config['name']}</b>", ""]
+        lines = [f"🔥 <b>FireWatch — {city_name}</b>", ""]
         lines.append("⚠️ <b>Районы высокого риска на сегодня:</b>")
-        for _, row in top3.iterrows():
-            bar = "█" * int(row["risk_score"] / 10) + "░" * (10 - int(row["risk_score"] / 10))
+        for row in rows:
+            score = row.get("risk_score", 0)
+            bar = "█" * int(score / 10) + "░" * (10 - int(score / 10))
             lines.append(
-                f"  • <b>{row['district']}</b> — риск {row['risk_score']:.0f}/100\n"
+                f"  • <b>{row['district']}</b> — риск {score:.0f}/100\n"
                 f"    {bar}\n"
-                f"    Инцидентов (12 мес): {row['total_incidents']}  |  "
-                f"Ср. ущерб: {int(row['avg_damage_tenge']):,} ₸".replace(",", " ")
+                f"    Инцидентов (12 мес): {row.get('total_incidents', 0)}  |  "
+                f"Ср. ущерб: {int(row.get('avg_damage_tenge', 0)):,} ₸".replace(",", " ")
             )
 
+        highest = rows[0]["district"] if rows else "—"
         lines += [
             "",
-            f"🏆 Самый опасный район: <b>{highest_risk['district']}</b>",
+            f"🏆 Самый опасный район: <b>{highest}</b>",
             "📋 Рекомендуется: провести профилактическую инспекцию",
             "",
             "<i>FireWatch · Ежедневный дайджест</i>",

@@ -53,7 +53,7 @@ const PRIORITY_META: Record<
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 async function fetchInspectionPlan(cityId: string, signal?: AbortSignal): Promise<InspectionPlanResponse> {
-  const response = await fetch(`${API_BASE}/api/v1/inspection-plan?city=${encodeURIComponent(cityId)}`, {
+  const response = await fetch(`${API_BASE}/api/v2/inspection-plan?city=${encodeURIComponent(cityId)}`, {
     signal,
   })
   if (!response.ok) throw new Error(`Inspection plan request failed: ${response.status}`)

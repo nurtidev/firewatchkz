@@ -171,3 +171,134 @@ export interface RoutingStation {
   lat: number
   lon: number
 }
+
+export interface OperationalCard {
+  id: string
+  status: 'uploaded' | 'processing' | 'ready_for_extraction' | 'extracted' | 'approved' | 'rejected' | 'deleted'
+  file_name: string
+  file_mime: string | null
+  uploaded_at: string
+  building_id: string | null
+  uploaded_by: string | null
+  thumbnail_key: string | null
+  converted_key: string | null
+}
+
+export interface CardStatus {
+  card_id: string
+  status: string
+  processed_at: string | null
+}
+
+export interface FieldValue {
+  value: string | number | boolean | null
+  confidence: number
+  source_page?: number | null
+}
+
+export interface Vulnerability {
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  description: string
+  regulation_violated?: string | null
+  recommended_action: string
+}
+
+export interface BuildingDetail extends Building {
+  risk_score: number | null
+  shap_values: Record<string, number> | null
+}
+
+export interface RiskBreakdown {
+  baseline_score: number
+  dynamic_modifier: number
+  final_score: number
+  horizon_days: number
+  expected_incidents: number
+}
+
+export interface ShapFactor {
+  feature: string
+  value: number | string | null
+  shap_value: number
+}
+
+export interface RiskExplanation {
+  shap_factors: ShapFactor[]
+  explanation: string
+}
+
+export interface BuildingRiskItem {
+  building_id: string
+  address: string
+  building_type: string | null
+  lat: number | null
+  lon: number | null
+  final_score: number
+  baseline_score: number
+  dynamic_modifier: number
+  risk_level: 'low' | 'medium' | 'high'
+}
+
+export interface InspectorBuilding {
+  building_id: string
+  address: string
+  building_type: string | null
+  floors_above: number | null
+  lat: number | null
+  lon: number | null
+  final_score: number
+  risk_level: 'low' | 'medium' | 'high'
+}
+
+export interface InspectorRouteWaypoint {
+  building_id: string
+  lat: number
+  lon: number
+  address: string
+  final_score: number
+}
+
+export interface InspectorRoute {
+  ordered_buildings: string[]
+  total_distance_km: number
+  estimated_time_min: number
+  waypoints: InspectorRouteWaypoint[]
+}
+
+export interface ExtractionData {
+  id: string
+  card_id: string
+  status: string
+  extracted_data: {
+    card_number?: FieldValue
+    approved_date?: FieldValue
+    building_name?: FieldValue
+    address?: FieldValue
+    city?: FieldValue
+    hazard_class?: FieldValue
+    floors_above?: FieldValue
+    floors_below?: FieldValue
+    total_area_sqm?: FieldValue
+    height_m?: FieldValue
+    year_built?: FieldValue
+    wall_material?: FieldValue
+    fire_resistance_degree?: FieldValue
+    max_occupancy?: FieldValue
+    has_gas_systems?: FieldValue
+    has_hazardous_materials?: FieldValue
+    overall_confidence?: number
+    missing_fields?: string[]
+    extraction_notes?: string | null
+    fire_safety?: {
+      alarm_type?: string | null
+      sprinkler_present?: boolean | null
+      smoke_extraction?: boolean | null
+      evacuation_exits?: number | null
+    }
+    hydrants?: Array<{ distance_m?: number | null; address?: string | null }>
+    vulnerabilities?: Vulnerability[]
+  }
+  human_corrections?: Record<string, unknown> | null
+  extraction_cost_usd?: number | null
+  created_at: string
+}

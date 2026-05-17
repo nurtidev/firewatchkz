@@ -30,7 +30,7 @@ export function clearStoredToken(): void {
 }
 
 export async function loginRequest(email: string, password: string): Promise<LoginResponse> {
-  const response = await fetch(`${BASE_URL}/api/v1/auth/login`, {
+  const response = await fetch(`${BASE_URL}/api/v2/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ export async function loginRequest(email: string, password: string): Promise<Log
 }
 
 export async function meRequest(token: string): Promise<AuthUser> {
-  const response = await fetch(`${BASE_URL}/api/v1/auth/me`, {
+  const response = await fetch(`${BASE_URL}/api/v2/auth/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
