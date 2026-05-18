@@ -8,14 +8,14 @@ import { useAuth } from '@/context/AuthContext'
 
 const NAV = [
   { href: '/dashboard', label: 'Обзор', icon: LayoutDashboard },
-  { href: '/dashboard/inspector', label: 'План инспекций', icon: ClipboardCheck, highlight: true },
-  { href: '/dashboard/routing', label: 'Маршрутизация', icon: Navigation, highlight: true },
   { href: '/dashboard/map', label: 'Карта рисков', icon: Map },
-  { href: '/dashboard/buildings', label: 'Здания / Планы', icon: Building2 },
-  { href: '/dashboard/documents', label: 'Документы', icon: FileText },
+  { href: '/dashboard/buildings', label: 'Объекты и QR-планы', icon: Building2 },
+  { href: '/dashboard/documents', label: 'Оперкарточки', icon: FileText },
+  { href: '/dashboard/inspector', label: 'План инспекций', icon: ClipboardCheck, highlight: true },
+  { href: '/dashboard/routing', label: 'Маршруты и слепые зоны', icon: Navigation, highlight: true },
   { href: '/dashboard/hydrants', label: 'Гидранты', icon: Droplets },
   { href: '/dashboard/operations', label: 'Аналитика', icon: BarChart3 },
-  { href: '/dashboard/chat', label: 'AI Аналитик', icon: MessageSquare },
+  { href: '/dashboard/chat', label: 'ИИ-аналитик', icon: MessageSquare },
   { href: '/dashboard/alerts', label: 'Уведомления', icon: Bell, adminOnly: true },
 ]
 
