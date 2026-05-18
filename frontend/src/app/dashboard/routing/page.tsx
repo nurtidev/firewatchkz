@@ -2,9 +2,9 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
-import { Navigation, Flame, Clock, Minus, AlertCircle, ChevronDown } from 'lucide-react'
+import { Navigation, Flame, Clock, Minus, AlertCircle, ChevronDown, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
-import type { RouteEstimate, RoutingStation } from '@/lib/types'
+import type { BlindZonesSummary, RouteEstimate, RoutingStation } from '@/lib/types'
 import { useCity } from '@/context/CityContext'
 
 const RouteMap = dynamic(() => import('@/components/map/RouteMap'), { ssr: false })
@@ -40,12 +40,30 @@ export default function RoutingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [blindZones, setBlindZones] = useState<BlindZonesSummary | null>(null)
+  const [threshold, setThreshold] = useState(10)
+
   useEffect(() => {
     api.routing.stations(cityId).then((data) => {
       setStations(data)
       if (data.length > 0) setSelectedStation(data[0])
     })
   }, [cityId])
+
+  useEffect(() => {
+    let cancelled = false
+    api.routing
+      .blindZones(cityId, threshold)
+      .then((data) => {
+        if (!cancelled) setBlindZones(data)
+      })
+      .catch(() => {
+        if (!cancelled) setBlindZones(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [cityId, threshold])
 
   const handleCalculate = async () => {
     if (!selectedStation) return
@@ -70,13 +88,95 @@ export default function RoutingPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       <div className="mb-5">
-        <h1 className="text-white text-xl font-bold">Экстренная маршрутизация</h1>
+        <h1 className="text-white text-xl font-bold">Маршрутизация и слепые зоны</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Расчёт времени прибытия с учётом спецправил: выделенные полосы, встречное движение
+          Расчёт времени прибытия пожарных частей и подсветка районов с превышением норматива.
         </p>
       </div>
+
+      {blindZones && (
+        <div className="bg-gray-800 rounded-xl p-4 mb-5 border border-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} className="text-red-400" />
+              <h2 className="text-white text-sm font-semibold uppercase tracking-wide">
+                Слепые зоны города
+              </h2>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-gray-400">
+              Норматив:
+              <select
+                value={threshold}
+                onChange={(e) => setThreshold(Number(e.target.value))}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-orange-500"
+              >
+                <option value={7}>7 мин</option>
+                <option value={10}>10 мин</option>
+                <option value={15}>15 мин</option>
+                <option value={20}>20 мин</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="rounded-lg border border-gray-700 bg-gray-900/50 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-gray-500">Зданий</div>
+              <div className="text-white font-semibold text-base">{blindZones.total_buildings.toLocaleString('ru-RU')}</div>
+            </div>
+            <div className={`rounded-lg border px-3 py-2.5 ${blindZones.blind_pct > 5 ? 'border-red-500/30 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}`}>
+              <div className={`text-[10px] uppercase tracking-wide ${blindZones.blind_pct > 5 ? 'text-red-300/80' : 'text-emerald-300/80'}`}>В слепой зоне</div>
+              <div className={`font-semibold text-base ${blindZones.blind_pct > 5 ? 'text-red-300' : 'text-emerald-300'}`}>
+                {blindZones.blind_buildings.toLocaleString('ru-RU')} ({blindZones.blind_pct}%)
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-700 bg-gray-900/50 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-gray-500">Районов</div>
+              <div className="text-white font-semibold text-base">{blindZones.districts.length}</div>
+            </div>
+          </div>
+
+          {blindZones.districts.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-6">Нет данных о районах.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-gray-500 text-xs uppercase tracking-wide border-b border-gray-700">
+                    <th className="text-left pb-2">Район</th>
+                    <th className="text-right pb-2 px-2">Зданий</th>
+                    <th className="text-right pb-2 px-2">Слепых</th>
+                    <th className="text-right pb-2 px-2">Сред. время</th>
+                    <th className="text-right pb-2">Макс.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700/50">
+                  {blindZones.districts.map((d) => {
+                    const over = d.blind_pct > 0
+                    return (
+                      <tr key={d.district} className={over ? 'bg-red-500/[0.03]' : ''}>
+                        <td className="py-2 text-gray-200">{d.district}</td>
+                        <td className="py-2 px-2 text-right text-gray-400 tabular-nums">{d.total_buildings.toLocaleString('ru-RU')}</td>
+                        <td className={`py-2 px-2 text-right tabular-nums font-medium ${over ? 'text-red-300' : 'text-gray-400'}`}>
+                          {d.blind_buildings} ({d.blind_pct}%)
+                        </td>
+                        <td className="py-2 px-2 text-right text-gray-300 tabular-nums">{d.avg_emergency_min.toFixed(1)} мин</td>
+                        <td className={`py-2 text-right tabular-nums ${d.max_emergency_min > threshold ? 'text-red-300' : 'text-gray-300'}`}>
+                          {d.max_emergency_min.toFixed(1)} мин
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-gray-600 text-xs mt-3">
+            * Расчёт по haversine + 30% (без OSRM). Экстренный режим — 60 км/ч.
+          </p>
+        </div>
+      )}
 
       {/* Форма выбора */}
       <div className="bg-gray-800 rounded-xl p-4 mb-4 space-y-3">

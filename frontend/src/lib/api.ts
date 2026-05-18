@@ -17,6 +17,7 @@ import type {
   HydrantUpdate,
   RouteEstimate,
   RoutingStation,
+  BlindZonesSummary,
   OperationalCard,
   CardStatus,
   ExtractionData,
@@ -146,6 +147,8 @@ export const api = {
       station_id?: string
     }) => post<RouteEstimate>('/api/v2/routing/estimate', body),
     stations: (city: string) => get<RoutingStation[]>(`/api/v2/routing/stations?city=${city}`),
+    blindZones: (city: string, thresholdMin = 10) =>
+      get<BlindZonesSummary>(`/api/v2/routing/blind-zones?city=${city}&threshold_min=${thresholdMin}`),
   },
 
   documents: {

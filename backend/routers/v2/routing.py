@@ -108,3 +108,142 @@ async def estimate_route(body: RouteEstimateRequest) -> RouteEstimateResponse:
         city=body.city,
         station_id=body.station_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# Blind zones — districts where avg emergency arrival exceeds a threshold.
+# Presentation §2.5: "Автоматическая подсветка «слепых зон»."
+# ---------------------------------------------------------------------------
+
+
+class BlindDistrict(BaseModel):
+    district: str
+    lat: float
+    lon: float
+    total_buildings: int
+    blind_buildings: int
+    blind_pct: float
+    avg_emergency_min: float
+    max_emergency_min: float
+
+
+class BlindZonesSummary(BaseModel):
+    city: str
+    threshold_min: float
+    total_buildings: int
+    blind_buildings: int
+    blind_pct: float
+    districts: List[BlindDistrict]
+
+
+@router.get("/routing/blind-zones", response_model=BlindZonesSummary)
+async def get_blind_zones(
+    city: str = Query(..., description="Идентификатор города"),
+    threshold_min: float = Query(
+        10.0, ge=1.0, le=60.0, description="Норматив времени прибытия в минутах"
+    ),
+    session: AsyncSession = Depends(get_db),
+) -> BlindZonesSummary:
+    """Сводка районов, где среднее экстренное время прибытия превышает норматив.
+
+    Считаем по каждому зданию: расстояние до ближайшей пожарной части
+    (haversine + 30%), время в минутах при 60 км/ч (экстренный режим).
+    Агрегируем по району.
+    """
+
+    # Все здания с координатами + район
+    buildings_rows = await session.execute(
+        text(
+            """
+            SELECT b.id,
+                   ST_Y(b.centroid) AS lat,
+                   ST_X(b.centroid) AS lon,
+                   COALESCE(b.district, '—') AS district
+            FROM buildings b
+            WHERE b.city_id = :city AND b.centroid IS NOT NULL
+            """
+        ),
+        {"city": city},
+    )
+    buildings = [dict(row) for row in buildings_rows.mappings().all()]
+
+    # Все пожарные части города
+    stations_rows = await session.execute(
+        text(
+            "SELECT id, lat, lon FROM fire_stations "
+            "WHERE city = :city AND lat IS NOT NULL AND lon IS NOT NULL"
+        ),
+        {"city": city},
+    )
+    stations = [dict(row) for row in stations_rows.mappings().all()]
+
+    if not stations or not buildings:
+        return BlindZonesSummary(
+            city=city,
+            threshold_min=threshold_min,
+            total_buildings=0,
+            blind_buildings=0,
+            blind_pct=0.0,
+            districts=[],
+        )
+
+    # Агрегация по району
+    district_stats: dict = {}
+    for b in buildings:
+        # ближайшая часть
+        min_km = min(
+            _haversine_km(float(b["lat"]), float(b["lon"]), float(s["lat"]), float(s["lon"]))
+            for s in stations
+        )
+        emergency_min = (min_km * 1.3 / _EMERGENCY_KMH) * 60
+        d = b["district"]
+        stat = district_stats.setdefault(
+            d,
+            {
+                "lat_sum": 0.0,
+                "lon_sum": 0.0,
+                "total": 0,
+                "blind": 0,
+                "time_sum": 0.0,
+                "time_max": 0.0,
+            },
+        )
+        stat["total"] += 1
+        stat["lat_sum"] += float(b["lat"])
+        stat["lon_sum"] += float(b["lon"])
+        stat["time_sum"] += emergency_min
+        if emergency_min > stat["time_max"]:
+            stat["time_max"] = emergency_min
+        if emergency_min > threshold_min:
+            stat["blind"] += 1
+
+    districts: List[BlindDistrict] = []
+    total = 0
+    total_blind = 0
+    for name, stat in district_stats.items():
+        n = stat["total"]
+        total += n
+        total_blind += stat["blind"]
+        districts.append(
+            BlindDistrict(
+                district=name,
+                lat=round(stat["lat_sum"] / n, 6),
+                lon=round(stat["lon_sum"] / n, 6),
+                total_buildings=n,
+                blind_buildings=stat["blind"],
+                blind_pct=round(stat["blind"] * 100.0 / n, 1),
+                avg_emergency_min=round(stat["time_sum"] / n, 1),
+                max_emergency_min=round(stat["time_max"], 1),
+            )
+        )
+
+    districts.sort(key=lambda d: d.blind_pct, reverse=True)
+
+    return BlindZonesSummary(
+        city=city,
+        threshold_min=threshold_min,
+        total_buildings=total,
+        blind_buildings=total_blind,
+        blind_pct=round(total_blind * 100.0 / total, 1) if total else 0.0,
+        districts=districts,
+    )

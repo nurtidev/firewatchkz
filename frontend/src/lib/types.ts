@@ -148,6 +148,26 @@ export interface RoutingStation {
   lon: number
 }
 
+export interface BlindDistrict {
+  district: string
+  lat: number
+  lon: number
+  total_buildings: number
+  blind_buildings: number
+  blind_pct: number
+  avg_emergency_min: number
+  max_emergency_min: number
+}
+
+export interface BlindZonesSummary {
+  city: string
+  threshold_min: number
+  total_buildings: number
+  blind_buildings: number
+  blind_pct: number
+  districts: BlindDistrict[]
+}
+
 export interface OperationalCard {
   id: string
   status: 'uploaded' | 'processing' | 'ready_for_extraction' | 'extracted' | 'approved' | 'rejected' | 'deleted'
