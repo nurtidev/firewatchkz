@@ -154,16 +154,16 @@ async def get_operations_analytics(
         ),
     )).mappings().all()
 
-    # Monthly trend (last 12 months)
+    # Monthly trend (last 12 months). Column is occurred_at, not date.
     monthly_rows = (await session.execute(
         text(
             """
             SELECT
-                to_char(date_trunc('month', date), 'YYYY-MM') AS month,
+                to_char(date_trunc('month', occurred_at), 'YYYY-MM') AS month,
                 COUNT(*)::int AS count,
                 COALESCE(SUM(damage_tenge), 0)::bigint AS damage
             FROM incidents
-            WHERE date >= (CURRENT_DATE - INTERVAL '12 months')
+            WHERE occurred_at >= (CURRENT_DATE - INTERVAL '12 months')
             GROUP BY 1
             ORDER BY 1
             """
