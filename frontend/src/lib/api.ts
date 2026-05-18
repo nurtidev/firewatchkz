@@ -18,6 +18,7 @@ import type {
   RouteEstimate,
   RoutingStation,
   BlindZonesSummary,
+  OperationsAnalytics,
   OperationalCard,
   CardStatus,
   ExtractionData,
@@ -95,6 +96,11 @@ export const api = {
   chat: {
     send: (city: string, message: string, history: ChatMessage[]) =>
       post<{ reply: string }>('/api/v2/chat', { city, message, history }),
+  },
+
+  operations: {
+    analytics: (city: string) =>
+      get<OperationsAnalytics>(`/api/v2/operations/analytics?city=${city}`),
   },
 
   inspector: {

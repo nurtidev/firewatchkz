@@ -168,6 +168,19 @@ export interface BlindZonesSummary {
   districts: BlindDistrict[]
 }
 
+export interface OperationsAnalytics {
+  city: string
+  totals: {
+    incidents: number
+    damage_tenge: number
+    casualties: number
+    avg_response_min: number | null
+  }
+  by_cause: { cause: string; count: number; damage_tenge: number }[]
+  by_severity: { severity: string; count: number }[]
+  monthly: { month: string; count: number; damage_tenge: number }[]
+}
+
 export interface OperationalCard {
   id: string
   status: 'uploaded' | 'processing' | 'ready_for_extraction' | 'extracted' | 'approved' | 'rejected' | 'deleted'
