@@ -170,10 +170,11 @@ async def get_operations_analytics(
         ),
     )).mappings().all()
 
-    # Avg response time from operations table
+    # Avg response time from operations table.
+    # Schema note: operations.city (not city_id) per migration 0003.
     avg_resp_row = (await session.execute(
         text(
-            "SELECT AVG(response_time_min) AS avg_min FROM operations WHERE city_id = :city"
+            "SELECT AVG(response_time_min) AS avg_min FROM operations WHERE city = :city"
         ),
         {"city": city},
     )).mappings().first() or {}
