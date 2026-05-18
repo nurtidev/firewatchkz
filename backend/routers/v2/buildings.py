@@ -240,27 +240,97 @@ def _mock_explanation(shap_factors: List[Dict[str, Any]]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _risk_level(final_score: Optional[float]) -> str:
+    if final_score is None:
+        return "unknown"
+    if final_score > 1.5:
+        return "high"
+    if final_score > 0.5:
+        return "medium"
+    return "low"
+
+
 @router.get("/buildings")
 async def list_buildings(
     city: str = Query(..., description="Идентификатор города (например, astana)"),
+    bbox: Optional[str] = Query(
+        None,
+        description="lon_min,lat_min,lon_max,lat_max — ограничивает выдачу видимой областью карты",
+    ),
+    building_type: Optional[str] = Query(
+        None, description="Фильтр по типу: residential | commercial | industrial | public | other"
+    ),
+    risk_level: Optional[str] = Query(
+        None, description="Фильтр по уровню риска: high | medium | low | unknown"
+    ),
+    district: Optional[str] = Query(None, description="Фильтр по району"),
+    limit: int = Query(500, ge=1, le=5000),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
 ) -> List[Dict[str, Any]]:
-    """Список зданий города в форме, ожидаемой фронтом."""
-    result = await session.execute(
-        text(
-            """
-            SELECT id, city_id, address, name, district, object_type,
-                   floors_above, total_area_sqm,
-                   ST_Y(centroid) AS lat, ST_X(centroid) AS lon,
-                   details
-            FROM buildings
-            WHERE city_id = :city
-            ORDER BY name NULLS LAST, id
-            """
-        ),
-        {"city": city},
-    )
-    return [_row_to_frontend_building(dict(row)) for row in result.mappings().all()]
+    """Список зданий города с риск-баллом (JOIN с latest risk_scores).
+
+    Возвращает форму-суперсет: подходит и `Building` (страница планов),
+    и `BuildingRiskItem` (слой риска на карте).
+    """
+
+    sql = """
+        WITH latest_risk AS (
+            SELECT DISTINCT ON (building_id)
+                   building_id, baseline_score, dynamic_modifier, final_score, score_date
+            FROM risk_scores
+            ORDER BY building_id, score_date DESC
+        )
+        SELECT b.id, b.city_id, b.address, b.name, b.district, b.object_type,
+               b.floors_above, b.total_area_sqm,
+               ST_Y(b.centroid) AS lat, ST_X(b.centroid) AS lon,
+               b.details,
+               r.baseline_score, r.dynamic_modifier, r.final_score, r.score_date
+        FROM buildings b
+        LEFT JOIN latest_risk r ON r.building_id = b.id
+        WHERE b.city_id = :city
+    """
+    params: Dict[str, Any] = {"city": city, "limit": limit, "offset": offset}
+
+    if bbox:
+        lon_min, lat_min, lon_max, lat_max = _parse_bbox(bbox)
+        sql += " AND ST_X(b.centroid) BETWEEN :lon_min AND :lon_max"
+        sql += " AND ST_Y(b.centroid) BETWEEN :lat_min AND :lat_max"
+        params.update({"lon_min": lon_min, "lon_max": lon_max, "lat_min": lat_min, "lat_max": lat_max})
+
+    if building_type:
+        sql += " AND b.object_type = :building_type"
+        params["building_type"] = building_type
+
+    if district:
+        sql += " AND b.district = :district"
+        params["district"] = district
+
+    sql += " ORDER BY r.final_score DESC NULLS LAST, b.name NULLS LAST, b.id"
+    sql += " LIMIT :limit OFFSET :offset"
+
+    result = await session.execute(text(sql), params)
+    rows = [dict(row) for row in result.mappings().all()]
+
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        item = _row_to_frontend_building(row)
+        final_score = float(row["final_score"]) if row.get("final_score") is not None else None
+        level = _risk_level(final_score)
+        if risk_level and level != risk_level:
+            continue
+        item["building_id"] = row["id"]
+        item["building_type"] = row.get("object_type")
+        item["final_score"] = final_score if final_score is not None else 0.0
+        item["baseline_score"] = (
+            float(row["baseline_score"]) if row.get("baseline_score") is not None else 0.0
+        )
+        item["dynamic_modifier"] = (
+            float(row["dynamic_modifier"]) if row.get("dynamic_modifier") is not None else 1.0
+        )
+        item["risk_level"] = level
+        items.append(item)
+    return items
 
 
 @router.get("/buildings/{building_id}")
