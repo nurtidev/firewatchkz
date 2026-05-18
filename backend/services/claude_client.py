@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
 import os
 import re
-from datetime import datetime, timedelta
 
 try:
     import anthropic
@@ -16,8 +14,6 @@ MODEL_NAME = "claude-haiku-4-5"
 # Haiku 4.5 pricing: $0.80/1M input tokens, $4.00/1M output tokens
 _INPUT_COST_PER_TOKEN = 0.80 / 1_000_000
 _OUTPUT_COST_PER_TOKEN = 4.00 / 1_000_000
-_RECOMMENDATION_CACHE: dict[str, dict] = {}
-_CACHE_TTL = timedelta(hours=1)
 _TERM_REPLACEMENTS = {
     "electrical": "электрооборудование",
     "open_flame": "открытое пламя",
@@ -40,59 +36,6 @@ class ClaudeClient:
         self.api_key = ""
         self.client = None
         self._refresh_client()
-
-    def get_recommendations(
-        self,
-        city: str,
-        city_name: str,
-        district_stats_table: str,
-        top_causes: str,
-        buildings: list[dict],
-    ) -> list[dict]:
-        self._refresh_client()
-        cached_entry = _RECOMMENDATION_CACHE.get(city)
-        now = datetime.utcnow()
-        if cached_entry and now - cached_entry["timestamp"] < _CACHE_TTL:
-            return self._localize_payload(cached_entry["payload"])
-
-        if not self.client:
-            payload = self._localize_payload(self._mock_recommendations(city_name, buildings))
-            _RECOMMENDATION_CACHE[city] = {"timestamp": now, "payload": payload}
-            return payload
-
-        buildings_table = self._buildings_context(buildings)
-        system_prompt = (
-            "Ты эксперт по пожарной безопасности для городского департамента.\n"
-            f"Город: {city_name}\n"
-            "Ниже данные по рискам районов:\n"
-            f"{self._localize_text(district_stats_table)}\n\n"
-            f"Топ причин пожаров: {self._localize_text(top_causes)}\n\n"
-            "Ниже приоритетные объекты и здания для инспекции:\n"
-            f"{buildings_table}\n\n"
-            "Сгенерируй ровно 5 конкретных рекомендаций.\n"
-            "Пиши только на русском языке.\n"
-            "Каждая рекомендация должна ссылаться на конкретное здание, объект или тип здания.\n"
-            "Не используй английские слова и технические метки из сырых данных.\n"
-            "Нельзя писать общие программы уровня 'launch initiative' или 'establish center'.\n"
-            "Формулируй рекомендации как действия для инспектора или департамента.\n"
-            'Верни ТОЛЬКО JSON-массив объектов формата:\n'
-            '[{"priority":"high|medium|low","title":"...","description":"...","expected_impact":"..."}]'
-        )
-
-        try:
-            response = self.client.messages.create(
-                model=MODEL_NAME,
-                max_tokens=1200,
-                system=system_prompt,
-                messages=[{"role": "user", "content": "Сформируй рекомендации сейчас."}],
-            )
-            self._log_usage(response)
-            text = self._response_text(response)
-            payload = self._localize_payload(self._parse_recommendations(text))
-        except Exception:
-            payload = self._localize_payload(self._mock_recommendations(city_name, buildings))
-        _RECOMMENDATION_CACHE[city] = {"timestamp": now, "payload": payload}
-        return payload
 
     def chat(self, city_name: str, message: str, history: list[dict], context: str) -> str:
         self._refresh_client()
@@ -162,103 +105,6 @@ class ClaudeClient:
             if text:
                 parts.append(text)
         return "".join(parts).strip()
-
-    def _parse_recommendations(self, text: str) -> list[dict]:
-        cleaned = text.strip()
-        cleaned = re.sub(r"^```json\s*", "", cleaned)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-        payload = json.loads(cleaned)
-        if not isinstance(payload, list):
-            raise ValueError("Recommendations response is not a list")
-
-        recommendations: list[dict] = []
-        for item in payload[:5]:
-            recommendations.append(
-                {
-                    "priority": item.get("priority", "medium"),
-                    "title": self._localize_text(item.get("title", "")),
-                    "description": self._localize_text(item.get("description", "")),
-                    "expected_impact": self._localize_text(item.get("expected_impact", "")),
-                }
-            )
-        while len(recommendations) < 5:
-            recommendations.append(self._mock_recommendations("Астана", [])[len(recommendations)])
-        return recommendations
-
-    def _mock_recommendations(self, city_name: str, buildings: list[dict]) -> list[dict]:
-        primary = buildings[0] if len(buildings) > 0 else {"name": "главные жилые комплексы города", "district": city_name}
-        secondary = buildings[1] if len(buildings) > 1 else primary
-        tertiary = buildings[2] if len(buildings) > 2 else secondary
-        return [
-            {
-                "priority": "high",
-                "title": f"Проверить электроснабжение на объекте «{primary['name']}»",
-                "description": f"Проведите внеплановую инспекцию электрощитовых, кабельных трасс и узлов нагрузки на объекте «{primary['name']}»{self._district_suffix(primary)}.",
-                "expected_impact": "Снижение вероятности возгораний по электрическим причинам в ближайшие 1-2 месяца.",
-            },
-            {
-                "priority": "high",
-                "title": f"Проверить пути эвакуации и противодымную защиту на объекте «{secondary['name']}»",
-                "description": f"Сделайте адресную проверку лестничных клеток, систем дымоудаления и сценариев эвакуации на объекте «{secondary['name']}».",
-                "expected_impact": "Снижение риска тяжелых последствий при пожаре в высотном или сложном объекте.",
-            },
-            {
-                "priority": "medium",
-                "title": f"Проверить внутреннее противопожарное водоснабжение на объекте «{tertiary['name']}»",
-                "description": f"Проверьте доступность пожарных кранов, состояние насосного оборудования и оперативный доступ к воде на объекте «{tertiary['name']}».",
-                "expected_impact": "Сокращение времени локализации пожара и уменьшение материального ущерба.",
-            },
-            {
-                "priority": "medium",
-                "title": "Проверить здания с высокой этажностью в районах повышенного риска",
-                "description": "Сформируйте адресный список высотных жилых и смешанных объектов и проведите инспекции по чек-листу: электрика, эвакуация, дымоудаление, доступ пожарной техники.",
-                "expected_impact": "Снижение сезонного риска на самых уязвимых объектах жилого фонда.",
-            },
-            {
-                "priority": "low",
-                "title": "Обновить карточки объектов для инспекторов на русском языке",
-                "description": "Добавьте в карточки объектов адрес, район, этажность, время прибытия ПЧ, потенциальные опасности и приоритетный сценарий проверки для каждого здания.",
-                "expected_impact": "Более быстрые и точные выездные проверки без потери контекста по объекту.",
-            },
-        ]
-
-    def _localize_payload(self, payload: list[dict]) -> list[dict]:
-        normalized: list[dict] = []
-        for item in payload:
-            normalized.append(
-                {
-                    "priority": item.get("priority", "medium"),
-                    "title": self._localize_text(item.get("title", "")),
-                    "description": self._localize_text(item.get("description", "")),
-                    "expected_impact": self._localize_text(item.get("expected_impact", "")),
-                }
-            )
-        return normalized
-
-    def _buildings_context(self, buildings: list[dict]) -> str:
-        if not buildings:
-            return "Нет данных по зданиям."
-        lines = []
-        for building in buildings[:5]:
-            lines.append(
-                " | ".join(
-                    [
-                        f"Объект: {building.get('name')}",
-                        f"Район: {building.get('district') or 'не указан'}",
-                        f"Тип: {self._localize_text(building.get('object_type') or 'не указан')}",
-                        f"Этажность: {building.get('floors_count') or 'не указана'}",
-                        f"Время прибытия ПЧ: {building.get('arrival_time_minutes') or 'не указано'} мин",
-                        f"Опасности: {self._localize_text(building.get('potential_hazards') or 'не указаны')}",
-                    ]
-                )
-            )
-        return "\n".join(lines)
-
-    def _district_suffix(self, building: dict) -> str:
-        district = building.get("district")
-        if not district:
-            return ""
-        return f" в районе {district}"
 
     def _localize_text(self, value: str) -> str:
         localized = value

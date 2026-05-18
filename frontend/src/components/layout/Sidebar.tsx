@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Map, TrendingUp, Lightbulb, MessageSquare, Bell, ClipboardCheck, Building2, Droplets, Navigation, FileText } from 'lucide-react'
+import { LayoutDashboard, Map, MessageSquare, Bell, ClipboardCheck, Building2, Droplets, Navigation, FileText } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '@/context/AuthContext'
 
@@ -14,8 +14,6 @@ const NAV = [
   { href: '/dashboard/buildings', label: 'Здания / Планы', icon: Building2 },
   { href: '/dashboard/documents', label: 'Документы', icon: FileText },
   { href: '/dashboard/hydrants', label: 'Гидранты', icon: Droplets },
-  { href: '/dashboard/forecast', label: 'Прогноз', icon: TrendingUp },
-  { href: '/dashboard/recommendations', label: 'Рекомендации', icon: Lightbulb },
   { href: '/dashboard/chat', label: 'AI Аналитик', icon: MessageSquare },
   { href: '/dashboard/alerts', label: 'Уведомления', icon: Bell, adminOnly: true },
 ]

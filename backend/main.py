@@ -30,8 +30,6 @@ from routers.v2 import cities as v2_cities
 from routers.v2 import kpi as v2_kpi
 from routers.v2 import risk_map as v2_risk_map
 from routers.v2 import operations as v2_operations
-from routers.v2 import forecast as v2_forecast
-from routers.v2 import recommendations as v2_recommendations
 from routers.v2 import chat as v2_chat
 from routers.v2 import telegram as v2_telegram
 from routers.v2 import inspection_plan as v2_inspection_plan
@@ -85,8 +83,6 @@ app.include_router(v2_cities.router, prefix="/api/v2", tags=["cities-v2"])
 app.include_router(v2_kpi.router, prefix="/api/v2", tags=["kpi-v2"])
 app.include_router(v2_risk_map.router, prefix="/api/v2", tags=["risk-map-v2"])
 app.include_router(v2_operations.router, prefix="/api/v2", tags=["operations-v2"])
-app.include_router(v2_forecast.router, prefix="/api/v2", tags=["forecast-v2"])
-app.include_router(v2_recommendations.router, prefix="/api/v2", tags=["recommendations-v2"])
 app.include_router(v2_chat.router, prefix="/api/v2", tags=["chat-v2"])
 app.include_router(v2_telegram.router, prefix="/api/v2", tags=["telegram-v2"])
 app.include_router(v2_inspection_plan.router, prefix="/api/v2", tags=["inspection-plan-v2"])

@@ -4,8 +4,6 @@ import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { Flame, TrendingDown, TrendingUp, ShieldAlert } from 'lucide-react'
 import { InspectionPlanPanel } from '@/components/ai/InspectionPlanPanel'
-import { RecommendationsPanel } from '@/components/ai/RecommendationCard'
-import { ForecastChart } from '@/components/charts/ForecastChart'
 import { IncidentsByDistrict } from '@/components/charts/IncidentsByDistrict'
 import { ResponseTimeChart } from '@/components/charts/ResponseTimeChart'
 import { StatCard } from '@/components/layout/StatCard'
@@ -103,14 +101,10 @@ function DashboardContent({ cityId }: { cityId: string }) {
         <IncidentsByDistrict key={`districts-${cityId}`} />
       </div>
 
-      <ForecastChart key={`forecast-${cityId}`} />
-
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <InspectionPlanPanel key={`inspection-plan-${cityId}`} cityId={cityId} />
         <ResponseTimeChart key={`operations-${cityId}`} cityId={cityId} />
       </div>
-
-      <RecommendationsPanel key={`recommendations-${cityId}`} />
     </div>
   )
 }

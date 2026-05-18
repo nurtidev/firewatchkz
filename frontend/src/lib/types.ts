@@ -20,30 +20,6 @@ export interface DistrictRisk {
   avg_damage_tenge: number
 }
 
-export interface ForecastPoint {
-  period: string
-  predicted?: number
-  actual?: number
-  lower_80?: number
-  upper_80?: number
-}
-
-export interface ForecastResponse {
-  city: string
-  months: number
-  model: string
-  r_squared: number
-  historical: ForecastPoint[]
-  forecast: ForecastPoint[]
-}
-
-export interface Recommendation {
-  priority: 'high' | 'medium' | 'low'
-  title: string
-  description: string
-  expected_impact: string
-}
-
 export interface KPI {
   city: string
   total_incidents_ytd: number

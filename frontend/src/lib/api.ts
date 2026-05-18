@@ -2,9 +2,7 @@ import type {
   City,
   CitySummary,
   DistrictRisk,
-  ForecastResponse,
   KPI,
-  Recommendation,
   ChatMessage,
   Incident,
   InspectorAlert,
@@ -91,15 +89,6 @@ export const api = {
       if (district) params.set('district', district)
       return get<{ total: number; items: Incident[] }>(`/api/v2/incidents?${params}`)
     },
-  },
-
-  forecast: {
-    get: (city: string, months: 3 | 6 | 12) =>
-      get<ForecastResponse>(`/api/v2/forecast?city=${city}&months=${months}`),
-  },
-
-  recommendations: {
-    get: (city: string) => get<Recommendation[]>(`/api/v2/recommendations?city=${city}`),
   },
 
   chat: {
