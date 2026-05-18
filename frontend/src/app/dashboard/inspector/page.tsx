@@ -312,6 +312,11 @@ function V2Panel({ city }: { city: string }) {
     }
   }
 
+  useEffect(() => {
+    handleCalculate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city])
+
   // Ordered building list: use route order when available
   const orderedBuildings: InspectorBuilding[] = route
     ? route.ordered_buildings
@@ -523,56 +528,53 @@ function V2Panel({ city }: { city: string }) {
 
 // ─── Root page ──────────────────────────────────────────────────────────────
 
-type Mode = 'v1' | 'v2'
+type Mode = 'districts' | 'buildings'
 
 export default function InspectorPage() {
   const { city } = useCity()
-  const [mode, setMode] = useState<Mode>('v1')
+  const [mode, setMode] = useState<Mode>('buildings')
 
   const cityId = city?.id ?? 'astana'
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-white font-semibold text-lg">Инспектор</h1>
+          <h1 className="text-white font-semibold text-lg">План инспекций</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {mode === 'v1'
-              ? 'Анализ факторов риска по районам — приоритеты для превентивных проверок'
-              : 'Обход зданий с высоким риском — оптимальный маршрут инспектора'}
+            {mode === 'districts'
+              ? 'Приоритеты по районам — какие зоны требуют профилактической работы.'
+              : 'Конкретные здания на сегодня — оптимальный маршрут по риск-баллу ML-модели.'}
           </p>
         </div>
 
-        {/* Mode switcher */}
         <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 shrink-0 self-start">
           <button
-            onClick={() => setMode('v1')}
+            onClick={() => setMode('buildings')}
             className={clsx(
               'px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              mode === 'v1'
+              mode === 'buildings'
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-400 hover:text-white'
             )}
           >
-            v1 Районы
+            По зданиям
           </button>
           <button
-            onClick={() => setMode('v2')}
+            onClick={() => setMode('districts')}
             className={clsx(
               'px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              mode === 'v2'
+              mode === 'districts'
                 ? 'bg-orange-500 text-white'
                 : 'text-gray-400 hover:text-white'
             )}
           >
-            v2 Здания
+            По районам
           </button>
         </div>
       </div>
 
-      {/* Panel */}
-      {mode === 'v1'
+      {mode === 'districts'
         ? <V1Panel city={cityId} />
         : <V2Panel city={cityId} />
       }

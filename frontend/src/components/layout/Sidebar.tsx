@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 
 const NAV = [
   { href: '/dashboard', label: 'Обзор', icon: LayoutDashboard },
-  { href: '/dashboard/inspector', label: 'Инспектор', icon: ClipboardCheck, highlight: true },
+  { href: '/dashboard/inspector', label: 'План инспекций', icon: ClipboardCheck, highlight: true },
   { href: '/dashboard/routing', label: 'Маршрутизация', icon: Navigation, highlight: true },
   { href: '/dashboard/map', label: 'Карта рисков', icon: Map },
   { href: '/dashboard/buildings', label: 'Здания / Планы', icon: Building2 },
