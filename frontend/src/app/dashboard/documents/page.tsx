@@ -217,7 +217,7 @@ export default function DocumentsPage() {
         <div>
           <h1 className="text-white text-xl font-bold">Оперативные карточки</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Оперативные карточки объектов пожарной безопасности МЧС РК
+            ИИ-обработка карточек по форме МЧС РК — загрузите PDF, проверьте поля, утвердите.
           </p>
         </div>
         <button
@@ -227,6 +227,27 @@ export default function DocumentsPage() {
           <Upload size={15} />
           Загрузить документ
         </button>
+      </div>
+
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+        {(() => {
+          const total = cards.length
+          const inProgress = cards.filter((c) => ACTIVE_STATUSES.includes(c.status)).length
+          const ready = cards.filter((c) => c.status === 'extracted').length
+          const approved = cards.filter((c) => c.status === 'approved').length
+          return [
+            { label: 'Всего', value: total, tone: 'border-gray-700 bg-gray-900/50 text-white' },
+            { label: 'В обработке', value: inProgress, tone: 'border-yellow-500/30 bg-yellow-500/5 text-yellow-300' },
+            { label: 'Ждут ревью', value: ready, tone: 'border-blue-500/30 bg-blue-500/5 text-blue-300' },
+            { label: 'Утверждено', value: approved, tone: 'border-green-500/30 bg-green-500/5 text-green-300' },
+          ].map(({ label, value, tone }) => (
+            <div key={label} className={`rounded-lg border px-3 py-2.5 ${tone}`}>
+              <div className="text-[10px] uppercase tracking-wide opacity-70">{label}</div>
+              <div className="font-semibold text-base">{value}</div>
+            </div>
+          ))
+        })()}
       </div>
 
       {/* Filter bar */}

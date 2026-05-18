@@ -13,23 +13,46 @@ import PdfPreviewLoader from '@/components/documents/PdfPreviewLoader'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
-const FIELD_CONFIG: { key: keyof NonNullable<ExtractionData['extracted_data']>; label: string }[] = [
-  { key: 'card_number', label: 'Номер карточки' },
-  { key: 'approved_date', label: 'Дата утверждения' },
-  { key: 'building_name', label: 'Название объекта' },
-  { key: 'address', label: 'Адрес' },
-  { key: 'city', label: 'Город' },
-  { key: 'hazard_class', label: 'Категория (Ф1-Ф5)' },
-  { key: 'floors_above', label: 'Этажей надземных' },
-  { key: 'floors_below', label: 'Этажей подземных' },
-  { key: 'total_area_sqm', label: 'Общая площадь, м²' },
-  { key: 'height_m', label: 'Высота, м' },
-  { key: 'year_built', label: 'Год постройки' },
-  { key: 'wall_material', label: 'Материал стен' },
-  { key: 'fire_resistance_degree', label: 'Степень огнестойкости' },
-  { key: 'max_occupancy', label: 'Макс. вместимость' },
-  { key: 'has_gas_systems', label: 'Газовые системы' },
+type FieldKey = keyof NonNullable<ExtractionData['extracted_data']>
+interface FieldGroup {
+  title: string
+  fields: { key: FieldKey; label: string }[]
+}
+
+const FIELD_GROUPS: FieldGroup[] = [
+  {
+    title: 'Идентификация',
+    fields: [
+      { key: 'card_number', label: 'Номер карточки' },
+      { key: 'approved_date', label: 'Дата утверждения' },
+      { key: 'building_name', label: 'Название объекта' },
+      { key: 'address', label: 'Адрес' },
+      { key: 'city', label: 'Город' },
+      { key: 'hazard_class', label: 'Категория (Ф1-Ф5)' },
+    ],
+  },
+  {
+    title: 'Конструкция',
+    fields: [
+      { key: 'floors_above', label: 'Этажей надземных' },
+      { key: 'floors_below', label: 'Этажей подземных' },
+      { key: 'total_area_sqm', label: 'Общая площадь, м²' },
+      { key: 'height_m', label: 'Высота, м' },
+      { key: 'year_built', label: 'Год постройки' },
+      { key: 'wall_material', label: 'Материал стен' },
+    ],
+  },
+  {
+    title: 'Пожарная безопасность',
+    fields: [
+      { key: 'fire_resistance_degree', label: 'Степень огнестойкости' },
+      { key: 'max_occupancy', label: 'Макс. вместимость' },
+      { key: 'has_gas_systems', label: 'Газовые системы' },
+    ],
+  },
 ]
+
+const FIELD_CONFIG: { key: FieldKey; label: string }[] = FIELD_GROUPS.flatMap((g) => g.fields)
 
 const SEVERITY_ORDER: Record<Vulnerability['severity'], number> = {
   critical: 0,
@@ -129,6 +152,99 @@ interface ExtractedFieldsPanelProps {
   firstEditableRef: React.RefObject<HTMLInputElement | null>
 }
 
+function renderField(
+  key: FieldKey,
+  label: string,
+  data: NonNullable<ExtractionData['extracted_data']>,
+  corrections: Record<string, string>,
+  onCorrection: (key: string, value: string) => void,
+  firstEditableRef: React.RefObject<HTMLInputElement | null>,
+  isFirstRef: { current: boolean },
+) {
+  const fieldEntry = data[key]
+  if (!fieldEntry || typeof fieldEntry !== 'object' || Array.isArray(fieldEntry)) return null
+  const fv = fieldEntry as FieldValue
+  const { ring, label: labelClass, editable } = fieldConfidenceClass(fv.confidence)
+  const currentValue = corrections[key] !== undefined
+    ? corrections[key]
+    : fieldValueToString(fv.value)
+
+  if (!editable) {
+    return (
+      <div key={key}>
+        <p className={`text-xs mb-1 ${labelClass}`}>{label}</p>
+        <p className={`text-sm text-gray-100 px-3 py-2 rounded-lg bg-gray-800 ${ring}`}>
+          {currentValue || '—'}
+        </p>
+      </div>
+    )
+  }
+
+  const refCallback = (el: HTMLInputElement | null) => {
+    if (el && isFirstRef.current) {
+      isFirstRef.current = false
+      firstEditableRef.current = el
+    }
+  }
+
+  return (
+    <div key={key}>
+      <p className={`text-xs mb-1 ${labelClass}`}>{label}</p>
+      <input
+        ref={refCallback}
+        type="text"
+        value={currentValue}
+        onChange={(e) => onCorrection(key, e.target.value)}
+        className={`w-full text-sm text-gray-100 bg-gray-800 px-3 py-2 rounded-lg outline-none ${ring} focus:ring-offset-0 placeholder-gray-600`}
+        placeholder={`Введите ${label.toLowerCase()}`}
+      />
+    </div>
+  )
+}
+
+function ReviewSummary({
+  data,
+  vulnerabilityCount,
+}: {
+  data: NonNullable<ExtractionData['extracted_data']>
+  vulnerabilityCount: number
+}) {
+  let green = 0
+  let yellow = 0
+  let red = 0
+  for (const { key } of FIELD_CONFIG) {
+    const entry = data[key]
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+    const conf = (entry as FieldValue).confidence
+    if (conf > 0.9) green += 1
+    else if (conf >= 0.6) yellow += 1
+    else red += 1
+  }
+  const total = green + yellow + red
+  const overall = Math.round((data.overall_confidence ?? 0) * 100)
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="rounded-lg border border-gray-700 bg-gray-900/50 px-3 py-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-gray-500">Уверенность</div>
+        <div className="text-white font-semibold text-base">{overall || '—'}{overall ? '%' : ''}</div>
+      </div>
+      <div className="rounded-lg border border-green-500/30 bg-green-500/5 px-3 py-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-green-300/80">Готовы</div>
+        <div className="text-green-300 font-semibold text-base">{green} / {total}</div>
+      </div>
+      <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 px-3 py-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-yellow-300/80">Проверить</div>
+        <div className="text-yellow-300 font-semibold text-base">{yellow + red}</div>
+      </div>
+      <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-red-300/80">Уязвимости</div>
+        <div className="text-red-300 font-semibold text-base">{vulnerabilityCount}</div>
+      </div>
+    </div>
+  )
+}
+
 function ExtractedFieldsPanel({
   extraction,
   corrections,
@@ -143,87 +259,51 @@ function ExtractedFieldsPanel({
   )
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-white font-semibold text-sm uppercase tracking-wide">
-        Извлечённые данные
-      </h2>
-
-      {data.overall_confidence !== undefined && (
-        <p className="text-gray-400 text-xs">
-          Общая уверенность: {Math.round(data.overall_confidence * 100)}%
-        </p>
-      )}
-
-      <div className="space-y-3">
-        {FIELD_CONFIG.map(({ key, label }) => {
-          const fieldEntry = data[key]
-          // Only handle FieldValue entries (skip special nested keys)
-          if (!fieldEntry || typeof fieldEntry !== 'object' || Array.isArray(fieldEntry)) return null
-          const fv = fieldEntry as FieldValue
-          const { ring, label: labelClass, editable } = fieldConfidenceClass(fv.confidence)
-          const currentValue = corrections[key] !== undefined
-            ? corrections[key]
-            : fieldValueToString(fv.value)
-
-          if (!editable) {
-            return (
-              <div key={key}>
-                <p className={`text-xs mb-1 ${labelClass}`}>{label}</p>
-                <p className={`text-sm text-gray-100 px-3 py-2 rounded-lg bg-gray-800 ${ring}`}>
-                  {currentValue || '—'}
-                </p>
-              </div>
-            )
-          }
-
-          // Editable field
-          const refCallback = (el: HTMLInputElement | null) => {
-            if (el && isFirst.current) {
-              isFirst.current = false
-              firstEditableRef.current = el
-            }
-          }
-
-          return (
-            <div key={key}>
-              <p className={`text-xs mb-1 ${labelClass}`}>{label}</p>
-              <input
-                ref={refCallback}
-                type="text"
-                value={currentValue}
-                onChange={(e) => onCorrection(key, e.target.value)}
-                className={`w-full text-sm text-gray-100 bg-gray-800 px-3 py-2 rounded-lg outline-none ${ring} focus:ring-offset-0 placeholder-gray-600`}
-                placeholder={`Введите ${label.toLowerCase()}`}
-              />
-            </div>
-          )
-        })}
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-white font-semibold text-sm uppercase tracking-wide mb-3">
+          Извлечённые данные
+        </h2>
+        <ReviewSummary data={data} vulnerabilityCount={vulnerabilities.length} />
       </div>
 
+      {FIELD_GROUPS.map((group) => (
+        <section key={group.title} className="space-y-3">
+          <h3 className="text-gray-400 text-xs font-medium uppercase tracking-wider border-b border-gray-700 pb-1.5">
+            {group.title}
+          </h3>
+          <div className="space-y-3">
+            {group.fields.map(({ key, label }) =>
+              renderField(key, label, data, corrections, onCorrection, firstEditableRef, isFirst)
+            )}
+          </div>
+        </section>
+      ))}
+
       {data.extraction_notes && (
-        <div className="mt-4 px-3 py-2 bg-gray-800 rounded-lg">
+        <div className="px-3 py-2 bg-gray-800 rounded-lg">
           <p className="text-gray-400 text-xs">{data.extraction_notes}</p>
         </div>
       )}
 
       {data.missing_fields && data.missing_fields.length > 0 && (
-        <div className="mt-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+        <div className="px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
           <p className="text-yellow-400 text-xs font-medium mb-1">Не найдены поля:</p>
           <p className="text-yellow-300 text-xs">{data.missing_fields.join(', ')}</p>
         </div>
       )}
 
       {vulnerabilities.length > 0 && (
-        <div className="pt-2">
-          <h3 className="text-white font-semibold text-sm uppercase tracking-wide mb-3">
-            Уязвимости
+        <section className="space-y-3 pt-2">
+          <h3 className="text-white font-semibold text-sm uppercase tracking-wide">
+            Уязвимости ({vulnerabilities.length})
           </h3>
           <div className="space-y-2">
             {vulnerabilities.map((v, i) => (
               <VulnerabilityCard key={i} vuln={v} />
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   )
