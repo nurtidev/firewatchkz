@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { ArrowLeft, Building2, Layers, Calendar, AlertTriangle, FileText } from 'lucide-react'
+import { ArrowLeft, Building2, Layers, Calendar, AlertTriangle, FileText, Cpu, Info } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { BuildingDetail, RiskBreakdown, RiskExplanation, Incident } from '@/lib/types'
 
@@ -65,20 +65,39 @@ function formatDate(dateStr: string): string {
   }
 }
 
+const FEATURE_LABELS: Record<string, string> = {
+  nearest_hydrant_m: 'Расстояние до ближайшего гидранта',
+  nearest_station_m: 'Расстояние до пожарной части',
+  incidents_500m_3y: 'Пожары в радиусе 500 м (3 года)',
+  incidents_on_building_3y: 'Пожары на объекте (3 года)',
+  building_density_500m: 'Плотность застройки в радиусе 500 м',
+  age_years: 'Возраст здания',
+  population_estimate: 'Оценочная численность жителей',
+  days_since_last_incident: 'Дней с последнего пожара',
+  days_since_last_inspection: 'Дней с последней проверки',
+  building_type: 'Тип объекта',
+}
+
+const FEATURE_UNITS: Record<string, string> = {
+  nearest_hydrant_m: 'м',
+  nearest_station_m: 'м',
+  age_years: 'лет',
+  days_since_last_incident: 'дн.',
+  days_since_last_inspection: 'дн.',
+}
+
 function featureLabel(feature: string): string {
-  const labels: Record<string, string> = {
-    floors_count: 'Этажей',
-    total_area: 'Площадь (м²)',
-    fire_resistance_degree: 'Огнестойкость',
-    distance_to_fire_department: 'Расстояние до ПЧ (км)',
-    arrival_time_minutes: 'Время прибытия (мин)',
-    building_age: 'Возраст здания',
-    construction_type: 'Тип конструкции',
-    object_type: 'Тип объекта',
-    days_since_last_incident: 'Дней с последнего инцидента',
-    incident_count_1y: 'Инцидентов за год',
+  return FEATURE_LABELS[feature] ?? feature
+}
+
+function formatFeatureValue(feature: string, value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return '—'
+  const unit = FEATURE_UNITS[feature]
+  if (typeof value === 'number') {
+    const rounded = Number.isInteger(value) ? value.toString() : value.toFixed(1)
+    return unit ? `${rounded} ${unit}` : rounded
   }
-  return labels[feature] ?? feature
+  return String(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -172,26 +191,47 @@ interface ShapChartProps {
 }
 
 function ShapChart({ factors, explanation }: ShapChartProps) {
-  const data = factors
+  const sorted = factors
     .slice()
     .sort((a, b) => Math.abs(b.shap_value) - Math.abs(a.shap_value))
     .slice(0, 8)
-    .map((f) => ({
-      name: featureLabel(f.feature),
-      value: Number(f.shap_value.toFixed(3)),
-    }))
+
+  const data = sorted.map((f) => ({
+    name: featureLabel(f.feature),
+    feature: f.feature,
+    rawValue: f.value,
+    value: Number(f.shap_value.toFixed(3)),
+  }))
+
+  const increased = sorted.filter((f) => f.shap_value > 0).length
+  const decreased = sorted.filter((f) => f.shap_value < 0).length
 
   return (
     <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 flex flex-col gap-4">
-      <h2 className="text-white font-semibold text-sm uppercase tracking-wide">
-        Ключевые факторы риска
-      </h2>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-white font-semibold text-sm uppercase tracking-wide">
+            Ключевые факторы риска
+          </h2>
+          <p className="text-gray-500 text-xs mt-1">
+            ML-модель XGBoost · SHAP-разложение по топ-{sorted.length} признакам
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <span className="text-[11px] px-2 py-1 rounded-md bg-orange-500/10 text-orange-300">
+            ↑ повышают: {increased}
+          </span>
+          <span className="text-[11px] px-2 py-1 rounded-md bg-blue-500/10 text-blue-300">
+            ↓ снижают: {decreased}
+          </span>
+        </div>
+      </div>
 
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={260}>
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
+          margin={{ top: 0, right: 28, left: 0, bottom: 0 }}
         >
           <XAxis
             type="number"
@@ -202,7 +242,7 @@ function ShapChart({ factors, explanation }: ShapChartProps) {
           <YAxis
             type="category"
             dataKey="name"
-            width={160}
+            width={180}
             tick={{ fill: '#d1d5db', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
@@ -215,9 +255,17 @@ function ShapChart({ factors, explanation }: ShapChartProps) {
               color: '#f9fafb',
               fontSize: 12,
             }}
-            formatter={(value) => {
+            formatter={(value, _name, entry) => {
               const v = typeof value === 'number' ? value.toFixed(3) : String(value ?? '')
-              return [v, 'SHAP'] as [string, string]
+              const datum = (entry?.payload ?? {}) as { feature?: string; rawValue?: number | string | null }
+              const sign = typeof value === 'number' && value >= 0 ? 'повышает риск' : 'снижает риск'
+              const featureValue = datum.feature
+                ? formatFeatureValue(datum.feature, datum.rawValue ?? null)
+                : ''
+              return [
+                `${v} (${sign})${featureValue ? ` · значение: ${featureValue}` : ''}`,
+                'SHAP',
+              ] as [string, string]
             }}
           />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -232,10 +280,61 @@ function ShapChart({ factors, explanation }: ShapChartProps) {
       </ResponsiveContainer>
 
       {explanation && (
-        <p className="text-gray-400 text-sm italic leading-relaxed">
-          {explanation}
-        </p>
+        <div className="rounded-lg border border-gray-700 bg-gray-900/40 p-3 flex gap-2 text-sm">
+          <Info size={14} className="text-orange-400 mt-0.5 shrink-0" />
+          <p className="text-gray-300 leading-relaxed">{explanation}</p>
+        </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// ML Model Card — explains where the risk score comes from
+// ---------------------------------------------------------------------------
+
+function ModelCard() {
+  return (
+    <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="p-2 bg-purple-500/10 rounded-lg shrink-0">
+          <Cpu size={18} className="text-purple-300" />
+        </div>
+        <div>
+          <h2 className="text-white font-semibold text-sm uppercase tracking-wide">
+            Модель оценки риска
+          </h2>
+          <p className="text-gray-500 text-xs mt-0.5">
+            Откуда берётся итоговый балл этого здания
+          </p>
+        </div>
+      </div>
+      <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-400">Алгоритм</dt>
+          <dd className="text-gray-200 text-right">XGBoost (Poisson)</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-400">Тип задачи</dt>
+          <dd className="text-gray-200 text-right">Регрессия частоты пожаров</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-400">Признаков</dt>
+          <dd className="text-gray-200 text-right">{Object.keys(FEATURE_LABELS).length} базовых</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-400">Объяснимость</dt>
+          <dd className="text-gray-200 text-right">SHAP (per-feature contributions)</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-400">Корректировка</dt>
+          <dd className="text-gray-200 text-right">Динамический модификатор (погода, сезонность)</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-400">Горизонт прогноза</dt>
+          <dd className="text-gray-200 text-right">30 дней (можно 7 / 90)</dd>
+        </div>
+      </dl>
     </div>
   )
 }
@@ -515,6 +614,9 @@ export default function BuildingDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Model card — what produced this risk score */}
+      <ModelCard />
 
       {/* Incident history */}
       <IncidentTable incidents={incidents} loading={loadingIncidents} />
